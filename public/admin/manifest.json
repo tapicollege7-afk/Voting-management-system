@@ -1,0 +1,22 @@
+{
+  "name": "VotePulse Admin Console",
+  "short_name": "AdminPortal",
+  "description": "Administrator Control Panel for VotePulse",
+  "start_url": "/admin/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2633/2633816.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2633/2633816.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

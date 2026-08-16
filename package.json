@@ -1,0 +1,27 @@
+{
+  "name": "votepulse-online-voting-system",
+  "version": "1.0.0",
+  "description": "Secure, Authenticated Online Voting & Election Management System PWA built with Node.js, Express, SQLite, and Real-Time OTP Verification.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "online-voting",
+    "election-management",
+    "pwa",
+    "otp-verification",
+    "nodejs",
+    "express",
+    "sqlite",
+    "rest-api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
