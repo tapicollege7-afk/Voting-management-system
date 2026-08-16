@@ -3,313 +3,368 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - VotePulse Online Voting System</title>
+  <title>Admin Dashboard - VotePulse Election Platform</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="/admin/manifest.json">
-  <meta name="theme-color" content="#d97706">
-  <meta name="description" content="Administrator Control Panel for election management, candidate setup, voter oversight, and live results.">
+  <link rel="manifest" href="./manifest.json?v=5.0">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="Manage elections, candidates, registered voters, and view real-time vote analytics.">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/admin/admin.css">
+  <link rel="stylesheet" href="./admin.css?v=5.0">
 </head>
 <body>
 
-  <!-- ADMIN AUTH OVERLAY (Shown if admin not signed in) -->
-  <div class="admin-auth-overlay" id="adminAuthOverlay">
-    <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:2.5rem; width:90%; max-width:420px; color:var(--text-main); box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
-      <div style="text-align:center; margin-bottom:1.5rem;">
-        <div style="font-size:2.5rem; margin-bottom:0.5rem;">⚡</div>
-        <h2 style="font-size:1.6rem; font-weight:800;">Admin Sign In</h2>
-        <p style="color:var(--text-muted); font-size:0.88rem; margin-top:4px;">Election Management Console</p>
+  <!-- Top Header Navigation -->
+  <header class="admin-header">
+    <div class="header-inner">
+      <a href="../../index.html" class="brand">
+        <span style="font-size:1.4rem;">⚡</span>
+        <span style="font-weight:800;">VotePulse</span>
+        <span class="brand-badge">Admin Console</span>
+      </a>
+      <div class="admin-user-info" id="adminHeaderNav">
+        <span class="user-badge" id="adminTag" style="display:none;">Admin ID: ADM-9999</span>
+        <button class="btn-sm btn-outline" id="adminLogoutBtn" style="display:none;" onclick="handleAdminLogout()">Logout</button>
+        <!-- Settings Gear Button -->
+        <button class="btn-sm btn-outline" onclick="openSettingsModal()" title="System Settings">⚙️</button>
       </div>
-
-      <div id="adminAuthAlert"></div>
-
-      <form onsubmit="handleAdminLogin(event)">
-        <div class="form-group">
-          <label class="form-label">Admin ID or Email</label>
-          <input type="text" id="adminIdInput" class="form-input" value="ADM-9999" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="password" id="adminPassInput" class="form-input" value="admin123" required>
-        </div>
-        <button type="submit" class="btn-admin-primary" style="width:100%; justify-content:center;">Access Console &rarr;</button>
-      </form>
     </div>
-  </div>
+  </header>
 
-  <!-- MAIN ADMIN LAYOUT -->
-  <div class="admin-wrapper">
+  <!-- Main App Layout -->
+  <div class="admin-layout">
 
-    <!-- Sidebar Navigation -->
-    <aside class="admin-sidebar">
-      <div>
-        <div class="brand-box">
-          <div class="brand-icon">⚡</div>
-          <div>
-            <div class="brand-title">VotePulse</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">Election Console</div>
-          </div>
+    <!-- Global System Alert -->
+    <div id="adminAlertBox" style="grid-column: 1 / -1;"></div>
+
+    <!-- 1. ADMIN AUTHENTICATION VIEW -->
+    <div id="adminAuthView" style="grid-column: 1 / -1;">
+      <div class="auth-box">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+          <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔐</div>
+          <h1 style="font-size:1.5rem; font-weight:800; color:var(--text-main);">Administrator Login</h1>
+          <p style="color:var(--text-muted); font-size:0.9rem;">Authorized Election Commissioners Only</p>
         </div>
 
-        <ul class="nav-menu">
-          <li class="nav-item">
-            <button class="active" onclick="switchTab('dashboard', this)"><span>📊</span> Dashboard</button>
-          </li>
-          <li class="nav-item">
-            <button onclick="switchTab('elections', this)"><span>🗳️</span> Manage Elections</button>
-          </li>
-          <li class="nav-item">
-            <button onclick="switchTab('candidates', this)"><span>👥</span> Candidates</button>
-          </li>
-          <li class="nav-item">
-            <button onclick="switchTab('voters', this)"><span>📋</span> Voter Roll</button>
-          </li>
-          <li class="nav-item">
-            <button onclick="switchTab('results', this)"><span>📈</span> Live Tally & Reports</button>
-          </li>
-        </ul>
+        <form onsubmit="handleAdminLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Admin ID</label>
+            <input type="text" id="adminLoginId" class="form-input" placeholder="e.g. ADM-9999" required value="ADM-9999">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admin Password</label>
+            <input type="password" id="adminLoginPass" class="form-input" placeholder="••••••••" required value="admin123">
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%; margin-top:0.5rem;">Authenticate & Access Dashboard &rarr;</button>
+        </form>
       </div>
+    </div>
 
-      <div>
-        <button class="btn-admin-secondary" style="width:100%; margin-bottom:0.5rem;" onclick="openSettingsModal()">⚙️ Settings</button>
-        <button class="btn-admin-secondary" style="width:100%;" onclick="adminLogout()">Sign Out</button>
-      </div>
+    <!-- 2. MAIN ADMIN DASHBOARD PANEL (Hidden until authenticated) -->
+    <aside class="sidebar" id="adminSidebar" style="display:none;">
+      <div class="sidebar-title">Management Modules</div>
+      <nav class="nav-list">
+        <button class="nav-item active" onclick="switchTab('overview')">
+          <span>📊</span> System Overview
+        </button>
+        <button class="nav-item" onclick="switchTab('elections')">
+          <span>🗳️</span> Manage Elections
+        </button>
+        <button class="nav-item" onclick="switchTab('candidates')">
+          <span>👤</span> Manage Candidates
+        </button>
+        <button class="nav-item" onclick="switchTab('voters')">
+          <span>👥</span> Registered Voters
+        </button>
+        <button class="nav-item" onclick="switchTab('results')">
+          <span>📈</span> Live Election Results
+        </button>
+      </nav>
     </aside>
 
-    <!-- Main Content -->
-    <main class="admin-main">
+    <main class="main-content" id="adminMainContent" style="display:none;">
 
-      <!-- Header -->
-      <div class="admin-header">
-        <div>
-          <h1 class="header-title" id="pageTitle">System Overview</h1>
-          <p style="color:var(--text-muted); font-size:0.9rem;">Monitor voting integrity, manage candidates, and generate reports</p>
-        </div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn-admin-secondary" onclick="openSettingsModal()">⚙️ Settings</button>
-          <a href="/" class="btn-admin-secondary" style="text-decoration:none;">Gateway &rarr;</a>
-        </div>
-      </div>
+      <!-- TAB 1: OVERVIEW -->
+      <section id="tab-overview" class="tab-pane active">
+        <h1 style="font-size:1.5rem; font-weight:800; margin-bottom:0.25rem;">Dashboard Overview</h1>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Real-time metrics and system diagnostic state</p>
 
-      <div id="adminGlobalAlert"></div>
-
-      <!-- TAB 1: DASHBOARD OVERVIEW -->
-      <section id="tab-dashboard" class="tab-panel">
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-val" id="metricVoters">0</div>
-            <div class="metric-label">Registered Voters</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="dashTotalElections">0</div>
+            <div class="stat-label">Total Elections</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-val" id="metricElections">0</div>
-            <div class="metric-label">Active Elections</div>
+          <div class="stat-card">
+            <div class="stat-value" id="dashTotalCandidates">0</div>
+            <div class="stat-label">Total Candidates</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-val" id="metricCandidates">0</div>
-            <div class="metric-label">Verified Candidates</div>
+          <div class="stat-card">
+            <div class="stat-value" id="dashTotalVoters">0</div>
+            <div class="stat-label">Registered Voters</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-val" id="metricVotes">0</div>
-            <div class="metric-label">Total Votes Cast</div>
+          <div class="stat-card">
+            <div class="stat-value" id="dashTotalVotes">0</div>
+            <div class="stat-label">Total Votes Cast</div>
           </div>
         </div>
 
-        <div class="panel-card">
-          <div class="panel-header">
-            <h2 class="panel-title">Recent Audit Log & Voting Activity</h2>
-            <button class="btn-admin-secondary" onclick="fetchAdminStats()">Refresh Data</button>
-          </div>
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Vote ID</th>
-                <th>Election ID</th>
-                <th>Voter ID</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="recentVotesTable">
-              <!-- Populated dynamically -->
-            </tbody>
-          </table>
+        <div class="card" style="margin-top:1.5rem;">
+          <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem;">Active Election Summary</h2>
+          <div id="activeElectionSummary">Loading election summary...</div>
         </div>
       </section>
 
-      <!-- TAB 2: MANAGE ELECTIONS -->
-      <section id="tab-elections" class="tab-panel" style="display:none;">
-        <div class="panel-card">
-          <h2 class="panel-title" style="margin-bottom:1rem;">Create New Election Poll</h2>
-          <form onsubmit="handleCreateElection(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Election Title</label>
-                <input type="text" id="elecTitle" class="form-input" placeholder="e.g. Student Council Presidential Poll 2026" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Category</label>
-                <select id="elecCategory" class="form-input">
-                  <option value="College / University">College / University</option>
-                  <option value="Society / Housing">Society / Housing</option>
-                  <option value="Organization / Internal">Organization / Internal</option>
-                  <option value="Community Poll">Community Poll</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Description & Scope</label>
-              <textarea id="elecDesc" class="form-input" rows="3" placeholder="Specify voting scope and objectives..." required></textarea>
-            </div>
-            <button type="submit" class="btn-admin-primary">+ Create & Publish Election</button>
-          </form>
+      <!-- TAB 2: ELECTIONS MANAGEMENT -->
+      <section id="tab-elections" class="tab-pane">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h1 style="font-size:1.5rem; font-weight:800;">Election Management</h1>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Create and control online voting polls</p>
+          </div>
+          <button class="btn-primary" onclick="openModal('createElectionModal')">+ Create New Election</button>
         </div>
 
-        <div class="panel-card">
-          <h2 class="panel-title" style="margin-bottom:1rem;">All Configured Elections</h2>
-          <table class="admin-table">
+        <div class="card">
+          <table class="table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>Election ID</th>
                 <th>Title</th>
                 <th>Category</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="electionsTable">
-              <!-- Populated dynamically -->
+            <tbody id="electionsTableBody">
+              <!-- Populated via admin.js -->
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- TAB 3: MANAGE CANDIDATES -->
-      <section id="tab-candidates" class="tab-panel" style="display:none;">
-        <div class="panel-card">
-          <h2 class="panel-title" style="margin-bottom:1rem;">Add New Candidate</h2>
-          <form onsubmit="handleAddCandidate(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Target Election</label>
-                <select id="candElectionSelect" class="form-input" required>
-                  <!-- Populated dynamically -->
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Candidate Name</label>
-                <input type="text" id="candName" class="form-input" placeholder="e.g. Liam Johnson" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Department / Party / Block</label>
-                <input type="text" id="candDept" class="form-input" placeholder="e.g. Computer Science" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Avatar / Photo URL</label>
-                <input type="url" id="candPhoto" class="form-input" placeholder="https://images.unsplash.com/...">
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Manifesto / Vision Statement</label>
-              <textarea id="candManifesto" class="form-input" rows="3" placeholder="Key goals and candidate pledge..." required></textarea>
-            </div>
-            <button type="submit" class="btn-admin-primary">+ Register Candidate</button>
-          </form>
+      <!-- TAB 3: CANDIDATES MANAGEMENT -->
+      <section id="tab-candidates" class="tab-pane">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h1 style="font-size:1.5rem; font-weight:800;">Candidate Registry</h1>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Register candidates and party manifestos</p>
+          </div>
+          <button class="btn-primary" onclick="openModal('createCandidateModal')">+ Register New Candidate</button>
         </div>
 
-        <div class="panel-card">
-          <h2 class="panel-title" style="margin-bottom:1rem;">Candidate Directory</h2>
-          <table class="admin-table">
+        <div class="card">
+          <table class="table">
             <thead>
               <tr>
                 <th>Candidate ID</th>
-                <th>Name</th>
-                <th>Department</th>
+                <th>Full Name</th>
+                <th>Party / Affiliation</th>
                 <th>Election ID</th>
-                <th>Votes</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="candidatesTable">
-              <!-- Populated dynamically -->
+            <tbody id="candidatesTableBody">
+              <!-- Populated via admin.js -->
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- TAB 4: VOTER ROLL -->
-      <section id="tab-voters" class="tab-panel" style="display:none;">
-        <div class="panel-card">
-          <div class="panel-header">
-            <h2 class="panel-title">Registered Voter Directory</h2>
-            <button class="btn-admin-secondary" onclick="loadVoters()">Refresh Directory</button>
+      <!-- TAB 4: VOTERS DIRECTORY -->
+      <section id="tab-voters" class="tab-pane">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h1 style="font-size:1.5rem; font-weight:800;">Voter Directory</h1>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Inspect registered voters and authentication status</p>
           </div>
-          <table class="admin-table">
+          <button class="btn-primary" onclick="openModal('createVoterModal')">+ Register Voter</button>
+        </div>
+
+        <div class="card">
+          <table class="table">
             <thead>
               <tr>
                 <th>Voter ID</th>
-                <th>Name</th>
+                <th>Full Name</th>
                 <th>Email</th>
-                <th>Role</th>
-                <th>Created Date</th>
+                <th>Phone</th>
+                <th>Registration Date</th>
               </tr>
             </thead>
-            <tbody id="votersTable">
-              <!-- Populated dynamically -->
+            <tbody id="votersTableBody">
+              <!-- Populated via admin.js -->
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- TAB 5: LIVE RESULTS & REPORTS -->
-      <section id="tab-results" class="tab-panel" style="display:none;">
-        <div class="panel-card">
-          <div class="panel-header">
-            <div>
-              <h2 class="panel-title">Live Tally & Result Dashboard</h2>
-              <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">Select an election to view real-time vote distribution</p>
-            </div>
-            <div style="display:flex; gap:10px;">
-              <select id="resultsElectionDropdown" class="form-input" style="width:240px;" onchange="loadElectionResults(this.value)">
-                <!-- Populated dynamically -->
-              </select>
-              <button class="btn-admin-primary" onclick="exportCSVReport()">Export CSV Report</button>
-            </div>
+      <!-- TAB 5: REAL-TIME RESULTS & REPORT EXPORT -->
+      <section id="tab-results" class="tab-pane">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h1 style="font-size:1.5rem; font-weight:800;">Real-Time Election Results</h1>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Live vote tallies and downloadable election reports</p>
           </div>
+          <div style="display:flex; gap:8px;">
+            <select id="resultsElectionSelect" class="form-input" style="width:auto;" onchange="loadResultsForSelected(this.value)">
+              <!-- Options populated dynamically -->
+            </select>
+            <button class="btn-primary" onclick="exportResultsCSV()">📥 Export CSV Report</button>
+          </div>
+        </div>
 
-          <div style="margin-top:1.5rem;" id="resultsContainer">
-            <!-- Dynamic Candidate Progress Bars -->
+        <div class="card" id="resultsDisplayArea">
+          <h2 id="resultsPollTitle" style="font-size:1.2rem; font-weight:700; margin-bottom:0.25rem;">Select an election above</h2>
+          <p id="resultsPollTotalVotes" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Total Votes: 0</p>
+
+          <div id="resultsCandidateBars">
+            <!-- Populated via admin.js -->
           </div>
         </div>
       </section>
 
     </main>
+
   </div>
 
-  <!-- SETTINGS MODAL -->
+  <!-- MODAL: CREATE ELECTION -->
+  <div class="modal-backdrop" id="createElectionModal">
+    <div class="modal-content">
+      <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:1rem;">Create New Election</h2>
+      <form onsubmit="handleCreateElection(event)">
+        <div class="form-group">
+          <label class="form-label">Election ID</label>
+          <input type="text" id="newElecId" class="form-input" placeholder="e.g. ELEC-2026-02" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Election Title</label>
+          <input type="text" id="newElecTitle" class="form-input" placeholder="e.g. Student Council President 2026" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" id="newElecCategory" class="form-input" placeholder="e.g. General, Departmental, Executive" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="newElecDesc" class="form-input" rows="3" placeholder="Brief election description..."></textarea>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:1rem;">
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createElectionModal')">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex:1;">Create Election</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE CANDIDATE -->
+  <div class="modal-backdrop" id="createCandidateModal">
+    <div class="modal-content">
+      <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:1rem;">Register Candidate</h2>
+      <form onsubmit="handleCreateCandidate(event)">
+        <div class="form-group">
+          <label class="form-label">Target Election</label>
+          <select id="candElectionSelect" class="form-input" required>
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Candidate ID</label>
+          <input type="text" id="newCandId" class="form-input" placeholder="e.g. CAND-101" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="newCandName" class="form-input" placeholder="e.g. Alex Rivera" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Party / Affiliation</label>
+          <input type="text" id="newCandParty" class="form-input" placeholder="e.g. Progress Party" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Manifesto Summary</label>
+          <textarea id="newCandManifesto" class="form-input" rows="3" placeholder="Key goals and campaign summary..."></textarea>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:1rem;">
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createCandidateModal')">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex:1;">Register Candidate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE VOTER -->
+  <div class="modal-backdrop" id="createVoterModal">
+    <div class="modal-content">
+      <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:1rem;">Register New Voter</h2>
+      <form onsubmit="handleAdminCreateVoter(event)">
+        <div class="form-group">
+          <label class="form-label">Voter ID</label>
+          <input type="text" id="adminVoterId" class="form-input" placeholder="e.g. VOT-202610" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="adminVoterName" class="form-input" placeholder="e.g. Morgan Taylor" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="adminVoterEmail" class="form-input" placeholder="morgan@example.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Phone</label>
+          <input type="tel" id="adminVoterPhone" class="form-input" placeholder="+1 555-0188">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initial Password</label>
+          <input type="password" id="adminVoterPass" class="form-input" placeholder="••••••••" required>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:1rem;">
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createVoterModal')">Cancel</button>
+          <button type="submit" class="btn-primary" style="flex:1;">Save Voter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADVANCED ADMIN SETTINGS MODAL -->
   <div class="modal-backdrop" id="settingsModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h2 style="font-size:1.3rem; font-weight:800;">⚙️ Console Settings</h2>
-        <button class="btn-admin-secondary" onclick="closeSettingsModal()" style="padding:4px 10px;">✕</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <h2 style="font-size:1.3rem; font-weight:800;">⚙️ System Settings</h2>
+        <button class="btn-sm btn-outline" onclick="closeSettingsModal()">✕</button>
       </div>
 
       <!-- Theme Switcher -->
-      <div style="margin-bottom:1.5rem;">
-        <label style="font-size:0.88rem; font-weight:700; display:block; margin-bottom:0.5rem;">Appearance Mode</label>
-        <div style="display:flex; background:rgba(0,0,0,0.06); padding:4px; border-radius:10px;">
-          <button id="themeBtnLight" style="flex:1; padding:0.6rem; border:none; border-radius:8px; font-weight:700; cursor:pointer;" onclick="setTheme('light')">☀️ Light Mode</button>
-          <button id="themeBtnDark" style="flex:1; padding:0.6rem; border:none; border-radius:8px; font-weight:700; cursor:pointer;" onclick="setTheme('dark')">🌙 Dark Mode</button>
+      <div style="margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--card-border);">
+        <label style="font-size:0.88rem; font-weight:700; display:block; margin-bottom:0.5rem;">🎨 Appearance Mode</label>
+        <div class="theme-toggle-row">
+          <button class="theme-option-btn" id="themeBtnLight" onclick="setTheme('light')">☀️ Light Mode</button>
+          <button class="theme-option-btn" id="themeBtnDark" onclick="setTheme('dark')">🌙 Dark Mode</button>
         </div>
+      </div>
+
+      <!-- Font Scale -->
+      <div style="margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--card-border);">
+        <label style="font-size:0.88rem; font-weight:700; display:block; margin-bottom:0.5rem;">🔍 Text Font Scale</label>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-sm btn-outline" style="flex:1; padding:0.6rem;" onclick="setFontScale(1)">100%</button>
+          <button class="btn-sm btn-outline" style="flex:1; padding:0.6rem;" onclick="setFontScale(1.15)">115%</button>
+          <button class="btn-sm btn-outline" style="flex:1; padding:0.6rem;" onclick="setFontScale(1.3)">130%</button>
+        </div>
+      </div>
+
+      <!-- Mobile App Download Option -->
+      <div>
+        <label style="font-size:0.88rem; font-weight:700; display:block; margin-bottom:0.4rem;">📱 Mobile App Download (PWA)</label>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Download VotePulse Admin App onto your device.</p>
+        <button class="btn-primary" style="margin-bottom:0.75rem;" onclick="triggerPwaInstall()">📱 Install App on Device</button>
       </div>
     </div>
   </div>
 
-  <script src="/admin/admin.js"></script>
+  <script src="./admin.js?v=5.0"></script>
 </body>
 </html>
