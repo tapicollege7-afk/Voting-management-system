@@ -1,9 +1,10 @@
-// Admin Module State
+// Admin Module State & Engine (Dual Localhost + GitHub Pages Support)
 let adminState = {
   adminUser: null,
   stats: null,
   elections: [],
   candidates: [],
+  voters: [],
   currentResultElectionId: null
 };
 
@@ -28,17 +29,23 @@ function setTheme(theme) {
 
   if (btnLight && btnDark) {
     if (theme === 'dark') {
-      btnDark.style.background = '#d97706';
-      btnDark.style.color = 'white';
-      btnLight.style.background = 'transparent';
-      btnLight.style.color = 'var(--text-muted)';
+      btnDark.classList.add('active');
+      btnLight.classList.remove('active');
     } else {
-      btnLight.style.background = '#d97706';
-      btnLight.style.color = 'white';
-      btnDark.style.background = 'transparent';
-      btnDark.style.color = 'var(--text-muted)';
+      btnLight.classList.add('active');
+      btnDark.classList.remove('active');
     }
   }
+}
+
+function initFontScale() {
+  const savedScale = localStorage.getItem('votepulse_font_scale') || '1';
+  setFontScale(parseFloat(savedScale));
+}
+
+function setFontScale(scale) {
+  document.documentElement.style.setProperty('--font-scale', scale);
+  localStorage.setItem('votepulse_font_scale', scale.toString());
 }
 
 function openSettingsModal() {
@@ -49,152 +56,239 @@ function closeSettingsModal() {
   document.getElementById('settingsModal').classList.remove('show');
 }
 
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('show');
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('show');
+}
+
 function showAdminAlert(msg, type = 'error') {
-  const box = document.getElementById('adminGlobalAlert');
+  const box = document.getElementById('adminAlertBox');
   if (!box) return;
-  box.innerHTML = `<div style="padding:1rem; border-radius:10px; margin-bottom:1rem; font-weight:600; ${type === 'error' ? 'background:#fef2f2; border:1px solid #fecaca; color:#dc2626;' : 'background:#ecfdf5; border:1px solid #a7f3d0; color:#047857;'}">${msg}</div>`;
-  setTimeout(() => { box.innerHTML = ''; }, 5000);
+  box.innerHTML = `<div class="alert-banner ${type}" style="padding:1rem; border-radius:10px; margin-bottom:1rem; font-weight:600; ${type === 'error' ? 'background:#fef2f2; border:1px solid #fecaca; color:#dc2626;' : 'background:#ecfdf5; border:1px solid #a7f3d0; color:#047857;'}">${msg}</div>`;
+  setTimeout(() => { box.innerHTML = ''; }, 6000);
 }
 
 function handleAdminLogin(e) {
-  e.preventDefault();
-  const id = document.getElementById('adminIdInput').value.trim();
-  const pass = document.getElementById('adminPassInput').value.trim();
+  if (e) e.preventDefault();
+  const id = document.getElementById('adminLoginId').value.trim();
+  const pass = document.getElementById('adminLoginPass').value.trim();
 
   if (pass === 'admin123' || pass === 'voter123') {
     adminState.adminUser = { id, role: 'admin' };
     localStorage.setItem('votepulse_admin', JSON.stringify(adminState.adminUser));
-    document.getElementById('adminAuthOverlay').style.display = 'none';
-    fetchAdminStats();
+    showAdminDashboard();
   } else {
-    document.getElementById('adminAuthAlert').innerHTML = `<div style="color:#dc2626; margin-bottom:1rem; font-size:0.9rem; font-weight:600;">Invalid admin password. Default password is <strong>admin123</strong></div>`;
+    showAdminAlert("Invalid password. Default admin password is admin123", 'error');
   }
 }
 
 function checkAdminAuth() {
   const saved = localStorage.getItem('votepulse_admin');
   if (saved) {
-    adminState.adminUser = JSON.parse(saved);
-    document.getElementById('adminAuthOverlay').style.display = 'none';
-    fetchAdminStats();
+    try {
+      adminState.adminUser = JSON.parse(saved);
+      showAdminDashboard();
+      return;
+    } catch (e) {
+      localStorage.removeItem('votepulse_admin');
+    }
   }
+  document.getElementById('adminAuthView').style.display = 'block';
+  document.getElementById('adminSidebar').style.display = 'none';
+  document.getElementById('adminMainContent').style.display = 'none';
 }
 
-function adminLogout() {
+function handleAdminLogout() {
   localStorage.removeItem('votepulse_admin');
   adminState.adminUser = null;
-  document.getElementById('adminAuthOverlay').style.display = 'flex';
+  document.getElementById('adminAuthView').style.display = 'block';
+  document.getElementById('adminSidebar').style.display = 'none';
+  document.getElementById('adminMainContent').style.display = 'none';
+  document.getElementById('adminTag').style.display = 'none';
+  document.getElementById('adminLogoutBtn').style.display = 'none';
 }
 
-function switchTab(tabId, btnElement) {
-  document.querySelectorAll('.nav-item button').forEach(b => b.classList.remove('active'));
-  if (btnElement) btnElement.classList.add('active');
+function showAdminDashboard() {
+  document.getElementById('adminAuthView').style.display = 'none';
+  document.getElementById('adminSidebar').style.display = 'block';
+  document.getElementById('adminMainContent').style.display = 'block';
+  document.getElementById('adminTag').style.display = 'inline-block';
+  document.getElementById('adminTag').textContent = `Admin ID: ${adminState.adminUser.id}`;
+  document.getElementById('adminLogoutBtn').style.display = 'inline-block';
 
-  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  fetchAdminStats();
+}
 
-  const panel = document.getElementById(`tab-${tabId}`);
-  if (panel) panel.style.display = 'block';
+function switchTab(tabId) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
 
-  const titleMap = {
-    'dashboard': 'System Overview & Audit Logs',
-    'elections': 'Manage Elections & Polls',
-    'candidates': 'Candidate Directory & Registration',
-    'voters': 'Registered Voter Directory',
-    'results': 'Live Tally & Analytical Reports'
-  };
-  document.getElementById('pageTitle').textContent = titleMap[tabId] || 'Admin Console';
+  const activeBtn = Array.from(document.querySelectorAll('.nav-item')).find(b => b.getAttribute('onclick')?.includes(tabId));
+  if (activeBtn) activeBtn.classList.add('active');
 
-  if (tabId === 'voters') loadVoters();
+  const pane = document.getElementById(`tab-${tabId}`);
+  if (pane) pane.classList.add('active');
+
+  if (tabId === 'voters') renderVotersTable();
   if (tabId === 'results') initResultsView();
 }
+
+// Fallback Initial Data for Static GitHub Pages
+const INITIAL_ELECTIONS = [
+  {
+    id: "ELEC-2026-01",
+    title: "General Election 2026",
+    category: "General Poll",
+    status: "active",
+    description: "Official 2026 General Election Poll"
+  }
+];
+
+const INITIAL_CANDIDATES = [
+  {
+    id: "CAND-101",
+    election_id: "ELEC-2026-01",
+    name: "Alex Rivera",
+    department: "Computer Science & Engineering",
+    party: "Progress Party",
+    manifesto: "Empowering digital innovation, transparent governance, and student welfare.",
+    vote_count: 0
+  },
+  {
+    id: "CAND-102",
+    election_id: "ELEC-2026-01",
+    name: "Jordan Smith",
+    department: "Business Administration",
+    party: "Alliance Party",
+    manifesto: "Fostering collaboration, sustainability, and career development initiatives.",
+    vote_count: 0
+  }
+];
 
 async function fetchAdminStats() {
   try {
     const res = await fetch('/api/admin/stats');
-    const data = await res.json();
-
-    if (data.success) {
-      adminState.stats = data.stats;
-      adminState.elections = data.elections;
-      adminState.candidates = data.candidates;
-
-      document.getElementById('metricVoters').textContent = data.stats.total_voters || 0;
-      document.getElementById('metricElections').textContent = data.stats.active_elections || 0;
-      document.getElementById('metricCandidates').textContent = data.stats.total_candidates || 0;
-      document.getElementById('metricVotes').textContent = data.stats.total_votes_cast || 0;
-
-      renderRecentVotes(data.recent_votes);
-      renderElectionsTable();
-      renderCandidatesTable();
-      populateDropdowns();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        adminState.stats = data.stats;
+        adminState.elections = data.elections;
+        adminState.candidates = data.candidates;
+        adminState.voters = data.voters || [];
+      } else {
+        useLocalAdminData();
+      }
+    } else {
+      useLocalAdminData();
     }
   } catch (err) {
-    showAdminAlert("Failed to load admin stats: " + err.message);
+    useLocalAdminData();
+  }
+
+  updateMetricsUI();
+  renderElectionsTable();
+  renderCandidatesTable();
+  renderVotersTable();
+  populateDropdowns();
+}
+
+function useLocalAdminData() {
+  const savedElections = localStorage.getItem('votepulse_admin_elections');
+  const savedCandidates = localStorage.getItem('votepulse_admin_candidates');
+  const savedVoters = localStorage.getItem('votepulse_admin_voters');
+
+  adminState.elections = savedElections ? JSON.parse(savedElections) : INITIAL_ELECTIONS;
+  adminState.candidates = savedCandidates ? JSON.parse(savedCandidates) : INITIAL_CANDIDATES;
+  adminState.voters = savedVoters ? JSON.parse(savedVoters) : [];
+}
+
+function saveLocalAdminData() {
+  localStorage.setItem('votepulse_admin_elections', JSON.stringify(adminState.elections));
+  localStorage.setItem('votepulse_admin_candidates', JSON.stringify(adminState.candidates));
+  localStorage.setItem('votepulse_admin_voters', JSON.stringify(adminState.voters));
+}
+
+function updateMetricsUI() {
+  const totalVotes = adminState.candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
+  document.getElementById('dashTotalElections').textContent = adminState.elections.length;
+  document.getElementById('dashTotalCandidates').textContent = adminState.candidates.length;
+  document.getElementById('dashTotalVoters').textContent = adminState.voters.length + 1; // including Admin
+  document.getElementById('dashTotalVotes').textContent = totalVotes;
+
+  const activeElec = adminState.elections.find(e => e.status === 'active');
+  const summaryBox = document.getElementById('activeElectionSummary');
+  if (activeElec) {
+    summaryBox.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="font-size:1.1rem; color:var(--text-main);">${activeElec.title}</strong>
+          <div style="font-size:0.85rem; color:var(--text-muted);">${activeElec.category} - ID: ${activeElec.id}</div>
+        </div>
+        <span class="status-badge active" style="background:#ecfdf5; color:#047857; padding:4px 10px; border-radius:20px; font-weight:700; font-size:0.8rem;">ACTIVE POLL</span>
+      </div>
+    `;
+  } else {
+    summaryBox.innerHTML = `<p style="color:var(--text-muted);">No active elections running currently.</p>`;
   }
 }
 
-function renderRecentVotes(votes = []) {
-  const tbody = document.getElementById('recentVotesTable');
-  if (!votes || votes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center;">No voting activity recorded yet. Create an election to begin.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = votes.map(v => `
-    <tr>
-      <td style="font-family:monospace;">${v.id}</td>
-      <td>${v.election_id}</td>
-      <td><strong>${v.voter_id}</strong></td>
-      <td>${new Date(v.timestamp).toLocaleString()}</td>
-      <td><span class="status-badge active">SEALED & RECORDED</span></td>
-    </tr>
-  `).join('');
-}
-
-// Elections CRUD
+// Elections Management
 async function handleCreateElection(e) {
   e.preventDefault();
-  const title = document.getElementById('elecTitle').value.trim();
-  const category = document.getElementById('elecCategory').value;
-  const description = document.getElementById('elecDesc').value.trim();
+  const id = document.getElementById('newElecId').value.trim();
+  const title = document.getElementById('newElecTitle').value.trim();
+  const category = document.getElementById('newElecCategory').value.trim();
+  const description = document.getElementById('newElecDesc').value.trim();
+
+  const newElec = { id, title, category, description, status: 'active' };
 
   try {
     const res = await fetch('/api/elections', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, category, description })
+      body: JSON.stringify(newElec)
     });
-    const data = await res.json();
-
-    if (data.success) {
-      showAdminAlert("New election created successfully!", 'success');
-      e.target.reset();
-      fetchAdminStats();
-    } else {
-      showAdminAlert(data.message);
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.success) return showAdminAlert(data.message, 'error');
     }
   } catch (err) {
-    showAdminAlert("Error creating election: " + err.message);
+    console.warn("Saving election locally.", err);
   }
+
+  adminState.elections.push(newElec);
+  saveLocalAdminData();
+  closeModal('createElectionModal');
+  e.target.reset();
+
+  showAdminAlert("New election created & activated!", 'success');
+  fetchAdminStats();
 }
 
 function renderElectionsTable() {
-  const tbody = document.getElementById('electionsTable');
+  const tbody = document.getElementById('electionsTableBody');
+  if (!tbody) return;
+
   if (adminState.elections.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted);">No elections configured yet. Use the form above to add an election.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center;">No elections configured yet. Click "+ Create New Election" above.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = adminState.elections.map(e => `
     <tr>
-      <td style="font-family:monospace;">${e.id}</td>
+      <td style="font-family:monospace; font-weight:700;">${e.id}</td>
       <td><strong>${e.title}</strong></td>
       <td>${e.category}</td>
-      <td><span class="status-badge ${e.status === 'active' ? 'active' : 'completed'}">${e.status}</span></td>
+      <td><span style="padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:800; text-transform:uppercase; ${e.status === 'active' ? 'background:#ecfdf5; color:#047857;' : 'background:#f1f5f9; color:#64748b;'}">${e.status}</span></td>
       <td>
         ${e.status === 'active' 
-          ? `<button class="btn-admin-secondary" style="padding:4px 10px; font-size:0.8rem;" onclick="toggleElectionStatus('${e.id}', 'completed')">Close Poll</button>`
-          : `<button class="btn-admin-primary" style="padding:4px 10px; font-size:0.8rem;" onclick="toggleElectionStatus('${e.id}', 'active')">Activate</button>`
+          ? `<button class="btn-sm btn-outline" style="padding:3px 8px; font-size:0.78rem;" onclick="toggleElectionStatus('${e.id}', 'completed')">Close Poll</button>`
+          : `<button class="btn-primary" style="padding:3px 8px; font-size:0.78rem;" onclick="toggleElectionStatus('${e.id}', 'active')">Activate</button>`
         }
       </td>
     </tr>
@@ -202,208 +296,235 @@ function renderElectionsTable() {
 }
 
 async function toggleElectionStatus(id, newStatus) {
+  const elec = adminState.elections.find(e => e.id === id);
+  if (elec) elec.status = newStatus;
+
   try {
-    const res = await fetch(`/api/elections/${id}/status`, {
+    await fetch(`/api/elections/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
     });
-    const data = await res.json();
+  } catch (e) {}
 
-    if (data.success) {
-      showAdminAlert(`Election status changed to ${newStatus}`, 'success');
-      fetchAdminStats();
-    }
-  } catch (err) {
-    showAdminAlert("Status update failed.");
-  }
+  saveLocalAdminData();
+  showAdminAlert(`Election status updated to ${newStatus}`, 'success');
+  fetchAdminStats();
 }
 
-// Candidates CRUD
-async function handleAddCandidate(e) {
+// Candidates Management
+async function handleCreateCandidate(e) {
   e.preventDefault();
   const election_id = document.getElementById('candElectionSelect').value;
-  const name = document.getElementById('candName').value.trim();
-  const department = document.getElementById('candDept').value.trim();
-  const photo_url = document.getElementById('candPhoto').value.trim();
-  const manifesto = document.getElementById('candManifesto').value.trim();
+  const id = document.getElementById('newCandId').value.trim();
+  const name = document.getElementById('newCandName').value.trim();
+  const party = document.getElementById('newCandParty').value.trim();
+  const manifesto = document.getElementById('newCandManifesto').value.trim();
+
+  const newCand = {
+    id,
+    election_id,
+    name,
+    department: party,
+    party,
+    manifesto,
+    photo_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300",
+    vote_count: 0
+  };
 
   try {
     const res = await fetch('/api/candidates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ election_id, name, department, photo_url, manifesto })
+      body: JSON.stringify(newCand)
     });
-    const data = await res.json();
-
-    if (data.success) {
-      showAdminAlert("Candidate registered successfully!", 'success');
-      e.target.reset();
-      fetchAdminStats();
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.success) return showAdminAlert(data.message, 'error');
     }
   } catch (err) {
-    showAdminAlert("Error registering candidate: " + err.message);
+    console.warn("Saving candidate locally.", err);
   }
+
+  adminState.candidates.push(newCand);
+  saveLocalAdminData();
+  closeModal('createCandidateModal');
+  e.target.reset();
+
+  showAdminAlert("Candidate registered successfully!", 'success');
+  fetchAdminStats();
 }
 
 function renderCandidatesTable() {
-  const tbody = document.getElementById('candidatesTable');
+  const tbody = document.getElementById('candidatesTableBody');
+  if (!tbody) return;
+
   if (adminState.candidates.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted);">No candidates registered yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center;">No candidates registered. Click "+ Register New Candidate".</td></tr>`;
     return;
   }
 
   tbody.innerHTML = adminState.candidates.map(c => `
     <tr>
-      <td style="font-family:monospace;">${c.id}</td>
+      <td style="font-family:monospace; font-weight:700;">${c.id}</td>
       <td><strong>${c.name}</strong></td>
-      <td>${c.department}</td>
+      <td>${c.party || c.department}</td>
       <td>${c.election_id}</td>
-      <td><strong style="color:var(--accent-amber); font-size:1.1rem;">${c.vote_count || 0}</strong></td>
+      <td>
+        <button class="btn-sm btn-outline" style="color:var(--danger); border-color:#fecaca;" onclick="deleteCandidate('${c.id}')">Delete</button>
+      </td>
     </tr>
   `).join('');
 }
 
+function deleteCandidate(candId) {
+  if (confirm("Are you sure you want to remove this candidate?")) {
+    adminState.candidates = adminState.candidates.filter(c => c.id !== candId);
+    saveLocalAdminData();
+    showAdminAlert("Candidate removed.", 'success');
+    fetchAdminStats();
+  }
+}
+
 function populateDropdowns() {
-  const candSelect = document.getElementById('candElectionSelect');
-  const resultsSelect = document.getElementById('resultsElectionDropdown');
+  const select = document.getElementById('candElectionSelect');
+  const resultsSelect = document.getElementById('resultsElectionSelect');
 
   if (adminState.elections.length === 0) {
-    if (candSelect) candSelect.innerHTML = `<option value="">-- No Elections Available --</option>`;
-    if (resultsSelect) resultsSelect.innerHTML = `<option value="">-- No Elections Available --</option>`;
+    if (select) select.innerHTML = `<option value="">-- No Elections --</option>`;
+    if (resultsSelect) resultsSelect.innerHTML = `<option value="">-- No Elections --</option>`;
     return;
   }
 
-  const options = adminState.elections.map(e => 
-    `<option value="${e.id}">${e.title}</option>`
-  ).join('');
-
-  if (candSelect) candSelect.innerHTML = options;
+  const options = adminState.elections.map(e => `<option value="${e.id}">${e.title}</option>`).join('');
+  if (select) select.innerHTML = options;
   if (resultsSelect) resultsSelect.innerHTML = options;
 
-  if (adminState.elections.length > 0 && !adminState.currentResultElectionId) {
+  if (!adminState.currentResultElectionId && adminState.elections.length > 0) {
     adminState.currentResultElectionId = adminState.elections[0].id;
   }
 }
 
-// Voter Roll Directory
-async function loadVoters() {
-  const tbody = document.getElementById('votersTable');
-  try {
-    const res = await fetch('/api/admin/stats');
-    const data = await res.json();
+// Voter Registration
+function handleAdminCreateVoter(e) {
+  e.preventDefault();
+  const voter_id = document.getElementById('adminVoterId').value.trim();
+  const name = document.getElementById('adminVoterName').value.trim();
+  const email = document.getElementById('adminVoterEmail').value.trim();
+  const phone = document.getElementById('adminVoterPhone').value.trim();
 
-    tbody.innerHTML = `
-      <tr>
-        <td style="font-family:monospace;">ADM-9999</td>
-        <td><strong>System Administrator</strong></td>
-        <td>admin@votepulse.org</td>
-        <td><span class="status-badge completed" style="background:#fef3c7; color:#b45309;">ADMIN</span></td>
-        <td>2026-08-01</td>
-      </tr>
-    `;
-  } catch (e) {
-    console.error(e);
-  }
+  const newVoter = { voter_id, name, email, phone, created_at: new Date().toISOString() };
+  adminState.voters.push(newVoter);
+  saveLocalAdminData();
+
+  closeModal('createVoterModal');
+  e.target.reset();
+  showAdminAlert("New voter registered!", 'success');
+  renderVotersTable();
+  updateMetricsUI();
 }
 
-// Live Tally & Analytical Reports
+function renderVotersTable() {
+  const tbody = document.getElementById('votersTableBody');
+  if (!tbody) return;
+
+  let rows = `
+    <tr>
+      <td style="font-family:monospace; font-weight:700;">ADM-9999</td>
+      <td><strong>System Administrator</strong></td>
+      <td>admin@votepulse.org</td>
+      <td>+1 555-0199</td>
+      <td>2026-08-01</td>
+    </tr>
+  `;
+
+  rows += adminState.voters.map(v => `
+    <tr>
+      <td style="font-family:monospace; font-weight:700;">${v.voter_id}</td>
+      <td><strong>${v.name}</strong></td>
+      <td>${v.email}</td>
+      <td>${v.phone || 'N/A'}</td>
+      <td>${new Date(v.created_at || Date.now()).toLocaleDateString()}</td>
+    </tr>
+  `).join('');
+
+  tbody.innerHTML = rows;
+}
+
+// Results View
 function initResultsView() {
   if (adminState.elections.length > 0) {
-    const elecId = document.getElementById('resultsElectionDropdown').value || adminState.elections[0].id;
-    loadElectionResults(elecId);
-  } else {
-    document.getElementById('resultsContainer').innerHTML = '<p style="color:var(--text-muted);">No active elections to display results.</p>';
+    const selectedId = document.getElementById('resultsElectionSelect').value || adminState.elections[0].id;
+    loadResultsForSelected(selectedId);
   }
 }
 
-async function loadElectionResults(electionId) {
-  if (!electionId) return;
+function loadResultsForSelected(electionId) {
   adminState.currentResultElectionId = electionId;
-  const container = document.getElementById('resultsContainer');
-  container.innerHTML = '<p style="color:var(--text-muted);">Fetching live election results...</p>';
+  const election = adminState.elections.find(e => e.id === electionId);
+  const candidates = adminState.candidates.filter(c => c.election_id === electionId);
 
-  try {
-    const res = await fetch(`/api/admin/results/${electionId}`);
-    const data = await res.json();
+  document.getElementById('resultsPollTitle').textContent = election ? election.title : 'Election Results';
 
-    if (!data.success) {
-      container.innerHTML = '<p style="color:var(--danger);">Error fetching election results.</p>';
-      return;
-    }
+  const totalVotes = candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
+  document.getElementById('resultsPollTotalVotes').textContent = `Total Ballots Recorded: ${totalVotes}`;
 
-    if (data.candidates.length === 0) {
-      container.innerHTML = '<p style="color:var(--text-muted);">No candidates recorded for this election poll yet.</p>';
-      return;
-    }
+  const barsArea = document.getElementById('resultsCandidateBars');
 
-    container.innerHTML = `
-      <div style="margin-bottom:1.5rem; background:#f8fafc; border:1px solid #e2e8f0; padding:1rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <h3 style="font-size:1.1rem; font-weight:700;">${data.election.title}</h3>
-          <span style="font-size:0.85rem; color:var(--text-muted);">${data.election.category}</span>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:1.6rem; font-weight:800; color:var(--accent-amber);">${data.total_votes_cast}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Total Ballots Counted</div>
-        </div>
-      </div>
-    ` + data.candidates.map(c => `
-      <div class="result-row">
-        <div class="result-meta">
-          <div>
-            <strong>${c.name}</strong> <span style="font-weight:400; color:var(--text-muted);">(${c.department})</span>
-          </div>
-          <div>
-            <strong style="color:var(--accent-emerald); font-size:1.1rem;">${c.vote_count} votes</strong> (${c.percentage}%)
-          </div>
-        </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width: ${c.percentage}%;"></div>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    container.innerHTML = '<p style="color:var(--danger);">Error rendering live chart.</p>';
+  if (candidates.length === 0) {
+    barsArea.innerHTML = `<p style="color:var(--text-muted);">No candidates registered for this poll.</p>`;
+    return;
   }
+
+  barsArea.innerHTML = candidates.map(c => {
+    const votes = c.vote_count || 0;
+    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+    return `
+      <div class="result-candidate-item">
+        <div class="result-candidate-header">
+          <span>${c.name} (${c.party || c.department})</span>
+          <span style="color:var(--accent);">${votes} votes (${pct}%)</span>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width: ${pct}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-// Export CSV Report
-async function exportCSVReport() {
+function exportResultsCSV() {
   if (!adminState.currentResultElectionId) return;
 
-  try {
-    const res = await fetch(`/api/admin/results/${adminState.currentResultElectionId}`);
-    const data = await res.json();
+  const election = adminState.elections.find(e => e.id === adminState.currentResultElectionId);
+  const candidates = adminState.candidates.filter(c => c.election_id === adminState.currentResultElectionId);
+  const totalVotes = candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
 
-    if (!data.success || !data.candidates) return;
+  let csv = "data:text/csv;charset=utf-8,";
+  csv += `Election Title,${election ? election.title : 'Results'}\n`;
+  csv += `Total Ballots Counted,${totalVotes}\n\n`;
+  csv += "Candidate ID,Candidate Name,Party/Department,Vote Count,Percentage\n";
 
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += `Election Title,${data.election.title}\n`;
-    csvContent += `Total Votes Cast,${data.total_votes_cast}\n\n`;
-    csvContent += "Candidate ID,Candidate Name,Department,Vote Count,Percentage\n";
+  candidates.forEach(c => {
+    const votes = c.vote_count || 0;
+    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+    csv += `${c.id},"${c.name}","${c.party || c.department}",${votes},${pct}%\n`;
+  });
 
-    data.candidates.forEach(c => {
-      csvContent += `${c.candidate_id},"${c.name}","${c.department}",${c.vote_count},${c.percentage}%\n`;
-    });
+  const uri = encodeURI(csv);
+  const a = document.createElement('a');
+  a.href = uri;
+  a.download = `VotePulse_Election_Report_${adminState.currentResultElectionId}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `VotePulse_Result_Report_${data.election.id}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    showAdminAlert("CSV Report exported successfully!", 'success');
-  } catch (err) {
-    showAdminAlert("Failed to generate CSV report.");
-  }
+  showAdminAlert("CSV Election Report downloaded successfully!", 'success');
 }
 
 function setupPWA() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/admin/sw.js')
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('Admin PWA SW registered:', reg.scope))
       .catch(err => console.warn('Admin SW failed:', err));
   }

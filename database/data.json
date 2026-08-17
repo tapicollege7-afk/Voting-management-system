@@ -8,11 +8,32 @@
       "phone": "+1 555-0199",
       "role": "admin",
       "password_hash": "admin123",
-      "created_at": "2026-08-17T00:00:00.000Z"
+      "created_at": "2026-08-17T13:03:58.750Z"
+    },
+    {
+      "id": "usr_1786971972252_k235",
+      "voter_id": "FAS",
+      "name": "smith",
+      "email": "tapicollege7@gmail.com",
+      "phone": "89001452365",
+      "role": "voter",
+      "password_hash": "1234",
+      "created_at": "2026-08-17T13:06:12.252Z"
     }
   ],
   "elections": [],
   "candidates": [],
   "votes": [],
-  "otps": []
+  "otps": [
+    {
+      "id": "otp_1786971972253",
+      "voter_id": "FAS",
+      "email": "tapicollege7@gmail.com",
+      "phone": "89001452365",
+      "otp_code": "563362",
+      "expires_at": "2026-08-17T13:11:12.253Z",
+      "verified": true,
+      "created_at": "2026-08-17T13:06:12.253Z"
+    }
+  ]
 }
