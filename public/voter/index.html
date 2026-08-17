@@ -6,7 +6,7 @@
   <title>Voter Portal - VotePulse Online Voting System</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="./manifest.json?v=5.0">
+  <link rel="manifest" href="./manifest.json?v=6.0">
   <meta name="theme-color" content="#059669">
   <meta name="description" content="Cast your vote securely using real-time OTP verification and single-vote protection.">
 
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./voter.css?v=5.0">
+  <link rel="stylesheet" href="./voter.css?v=6.0">
 </head>
 <body>
 
@@ -34,14 +34,21 @@
     </div>
   </div>
 
-  <!-- Header - Clean & Sleek -->
+  <!-- Header - Clean & Sleek with Persistent Back Navigation -->
   <header class="voter-header">
     <div class="header-inner">
-      <a href="../../index.html" class="brand">
-        <span style="font-size:1.4rem;">🗳️</span>
-        <span style="font-weight:700;">VotePulse</span>
-        <span class="brand-badge">Voter Module</span>
-      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <!-- Prominent Back to Hub Button -->
+        <a href="../../index.html" class="btn-sm btn-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:700;">
+          ← Back to Hub
+        </a>
+        <a href="../../index.html" class="brand" style="text-decoration:none;">
+          <span style="font-size:1.4rem;">🗳️</span>
+          <span style="font-weight:700;">VotePulse</span>
+          <span class="brand-badge">Voter Module</span>
+        </a>
+      </div>
+
       <div class="voter-info" id="voterNavInfo">
         <span class="voter-tag" id="voterTag" style="display:none;">Voter ID: --</span>
         <button class="btn-sm btn-outline" id="logoutBtn" style="display:none;" onclick="handleLogout()">Logout</button>
@@ -61,6 +68,9 @@
     <div id="authView">
       <div class="auth-box">
         <div class="auth-header">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <a href="../../index.html" style="font-size:0.85rem; color:var(--text-muted); text-decoration:none; font-weight:600;">← Exit to Central Hub</a>
+          </div>
           <h1 class="auth-title">Voter Access</h1>
           <p style="color:var(--text-muted); font-size:0.9rem;">Sign in or register to participate in active digital polls</p>
         </div>
@@ -113,6 +123,10 @@
 
     <!-- 2. VOTING & BALLOT VIEW (Visible after OTP verification) -->
     <div id="votingView" style="display:none;">
+
+      <div style="margin-bottom:1rem;">
+        <button class="btn-sm btn-outline" onclick="handleLogout()">← Sign Out & Back to Voter Login</button>
+      </div>
 
       <!-- Active Election Banner/Selector -->
       <div class="election-card-select">
@@ -185,6 +199,7 @@
 
         <button type="submit" class="btn-primary" id="otpSubmitBtn" style="margin-top:0.5rem;">Verify & Authenticate &rarr;</button>
         <button type="button" class="btn-sm btn-outline" style="width:100%; margin-top:0.8rem;" onclick="requestResendOTP()">🔄 Resend New Real-Time OTP</button>
+        <button type="button" class="btn-sm btn-outline" style="width:100%; margin-top:0.5rem;" onclick="closeOtpModal()">← Cancel & Back</button>
       </form>
     </div>
   </div>
@@ -233,12 +248,12 @@
         Are you sure you want to cast your ballot for <strong id="confirmCandName" style="color:#059669;">Candidate Name</strong>? This action is permanent and cannot be undone or modified.
       </p>
       <div style="display:flex; gap:12px;">
-        <button class="btn-sm btn-outline" style="flex:1; padding:0.8rem;" onclick="closeVoteModal()">Cancel</button>
+        <button class="btn-sm btn-outline" style="flex:1; padding:0.8rem;" onclick="closeVoteModal()">Cancel / Back</button>
         <button class="btn-primary" style="flex:1; padding:0.8rem;" onclick="submitFinalVote()">Confirm & Cast Vote</button>
       </div>
     </div>
   </div>
 
-  <script src="./voter.js?v=5.0"></script>
+  <script src="./voter.js?v=6.0"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
   <title>VotePulse - Secure Online Voting Platform</title>
 
   <!-- PWA Metadata with relative paths for GitHub Pages -->
-  <link rel="manifest" href="./public/manifest.json?v=5.0">
+  <link rel="manifest" href="./public/manifest.json?v=6.0">
   <meta name="theme-color" content="#2563eb">
   <meta name="description" content="Secure, authenticated, real-time e-Voting and Election Management platform with duplicate vote protection and PWA support.">
 
@@ -15,11 +15,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./public/css/hub.css?v=5.0">
+  <link rel="stylesheet" href="./public/css/hub.css?v=6.0">
 </head>
 <body>
 
-  <!-- Header - Clean & Minimalist -->
+  <!-- Header - Clean & Minimalist with Universal Navigation -->
   <header class="app-header">
     <div class="header-container">
       <a href="./index.html" class="brand">
@@ -30,6 +30,8 @@
         </div>
       </a>
       <div class="header-nav">
+        <!-- Universal Home Navigation Button -->
+        <a href="./index.html" class="btn-card btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; text-decoration:none;">🏠 Home</a>
         <!-- Settings Gear Button -->
         <button class="icon-btn" onclick="openSettingsModal()" title="System Settings">⚙️</button>
       </div>
@@ -220,6 +222,6 @@
     <p>&copy; 2026 VotePulse System Engine. Built with HTML5, CSS3, JavaScript, Node.js REST API, SQLite, and PWA Service Workers.</p>
   </footer>
 
-  <script src="./public/js/hub.js?v=5.0"></script>
+  <script src="./public/js/hub.js?v=6.0"></script>
 </body>
 </html>

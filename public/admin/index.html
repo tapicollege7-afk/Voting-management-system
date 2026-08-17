@@ -6,7 +6,7 @@
   <title>Admin Dashboard - VotePulse Election Platform</title>
 
   <!-- PWA -->
-  <link rel="manifest" href="./manifest.json?v=5.0">
+  <link rel="manifest" href="./manifest.json?v=6.0">
   <meta name="theme-color" content="#2563eb">
   <meta name="description" content="Manage elections, candidates, registered voters, and view real-time vote analytics.">
 
@@ -15,18 +15,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="./admin.css?v=5.0">
+  <link rel="stylesheet" href="./admin.css?v=6.0">
 </head>
 <body>
 
-  <!-- Top Header Navigation -->
+  <!-- Top Header Navigation with Persistent Back Button -->
   <header class="admin-header">
     <div class="header-inner">
-      <a href="../../index.html" class="brand">
-        <span style="font-size:1.4rem;">⚡</span>
-        <span style="font-weight:800;">VotePulse</span>
-        <span class="brand-badge">Admin Console</span>
-      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <!-- Prominent Back to Hub Button -->
+        <a href="../../index.html" class="btn-sm btn-outline" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:700;">
+          ← Back to Hub
+        </a>
+        <a href="../../index.html" class="brand" style="text-decoration:none;">
+          <span style="font-size:1.4rem;">⚡</span>
+          <span style="font-weight:800;">VotePulse</span>
+          <span class="brand-badge">Admin Console</span>
+        </a>
+      </div>
+
       <div class="admin-user-info" id="adminHeaderNav">
         <span class="user-badge" id="adminTag" style="display:none;">Admin ID: ADM-9999</span>
         <button class="btn-sm btn-outline" id="adminLogoutBtn" style="display:none;" onclick="handleAdminLogout()">Logout</button>
@@ -61,6 +68,7 @@
             <input type="password" id="adminLoginPass" class="form-input" placeholder="••••••••" required value="admin123">
           </div>
           <button type="submit" class="btn-primary" style="width:100%; margin-top:0.5rem;">Authenticate & Access Dashboard &rarr;</button>
+          <a href="../../index.html" class="btn-sm btn-outline" style="display:block; text-align:center; margin-top:0.8rem; text-decoration:none;">← Exit to Gateway Hub</a>
         </form>
       </div>
     </div>
@@ -85,13 +93,19 @@
           <span>📈</span> Live Election Results
         </button>
       </nav>
+      <div style="padding:1rem;">
+        <a href="../../index.html" class="btn-sm btn-outline" style="width:100%; text-decoration:none; display:block; text-align:center;">← Exit to Central Hub</a>
+      </div>
     </aside>
 
     <main class="main-content" id="adminMainContent" style="display:none;">
 
       <!-- TAB 1: OVERVIEW -->
       <section id="tab-overview" class="tab-pane active">
-        <h1 style="font-size:1.5rem; font-weight:800; margin-bottom:0.25rem;">Dashboard Overview</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+          <h1 style="font-size:1.5rem; font-weight:800;">Dashboard Overview</h1>
+          <a href="../../index.html" class="btn-sm btn-outline" style="text-decoration:none;">← Hub</a>
+        </div>
         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Real-time metrics and system diagnostic state</p>
 
         <div class="stats-grid">
@@ -123,8 +137,11 @@
       <section id="tab-elections" class="tab-pane">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <div>
-            <h1 style="font-size:1.5rem; font-weight:800;">Election Management</h1>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Create and control online voting polls</p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-sm btn-outline" onclick="switchTab('overview')">← Back to Overview</button>
+              <h1 style="font-size:1.5rem; font-weight:800;">Election Management</h1>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:4px;">Create and control online voting polls</p>
           </div>
           <button class="btn-primary" onclick="openModal('createElectionModal')">+ Create New Election</button>
         </div>
@@ -151,8 +168,11 @@
       <section id="tab-candidates" class="tab-pane">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <div>
-            <h1 style="font-size:1.5rem; font-weight:800;">Candidate Registry</h1>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Register candidates and party manifestos</p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-sm btn-outline" onclick="switchTab('overview')">← Back to Overview</button>
+              <h1 style="font-size:1.5rem; font-weight:800;">Candidate Registry</h1>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:4px;">Register candidates and party manifestos</p>
           </div>
           <button class="btn-primary" onclick="openModal('createCandidateModal')">+ Register New Candidate</button>
         </div>
@@ -179,8 +199,11 @@
       <section id="tab-voters" class="tab-pane">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <div>
-            <h1 style="font-size:1.5rem; font-weight:800;">Voter Directory</h1>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Inspect registered voters and authentication status</p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-sm btn-outline" onclick="switchTab('overview')">← Back to Overview</button>
+              <h1 style="font-size:1.5rem; font-weight:800;">Voter Directory</h1>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:4px;">Inspect registered voters and authentication status</p>
           </div>
           <button class="btn-primary" onclick="openModal('createVoterModal')">+ Register Voter</button>
         </div>
@@ -207,8 +230,11 @@
       <section id="tab-results" class="tab-pane">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <div>
-            <h1 style="font-size:1.5rem; font-weight:800;">Real-Time Election Results</h1>
-            <p style="color:var(--text-muted); font-size:0.9rem;">Live vote tallies and downloadable election reports</p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-sm btn-outline" onclick="switchTab('overview')">← Back to Overview</button>
+              <h1 style="font-size:1.5rem; font-weight:800;">Real-Time Election Results</h1>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:4px;">Live vote tallies and downloadable election reports</p>
           </div>
           <div style="display:flex; gap:8px;">
             <select id="resultsElectionSelect" class="form-input" style="width:auto;" onchange="loadResultsForSelected(this.value)">
@@ -254,7 +280,7 @@
           <textarea id="newElecDesc" class="form-input" rows="3" placeholder="Brief election description..."></textarea>
         </div>
         <div style="display:flex; gap:8px; margin-top:1rem;">
-          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createElectionModal')">Cancel</button>
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createElectionModal')">Cancel / Back</button>
           <button type="submit" class="btn-primary" style="flex:1;">Create Election</button>
         </div>
       </form>
@@ -289,7 +315,7 @@
           <textarea id="newCandManifesto" class="form-input" rows="3" placeholder="Key goals and campaign summary..."></textarea>
         </div>
         <div style="display:flex; gap:8px; margin-top:1rem;">
-          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createCandidateModal')">Cancel</button>
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createCandidateModal')">Cancel / Back</button>
           <button type="submit" class="btn-primary" style="flex:1;">Register Candidate</button>
         </div>
       </form>
@@ -322,7 +348,7 @@
           <input type="password" id="adminVoterPass" class="form-input" placeholder="••••••••" required>
         </div>
         <div style="display:flex; gap:8px; margin-top:1rem;">
-          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createVoterModal')">Cancel</button>
+          <button type="button" class="btn-sm btn-outline" style="flex:1;" onclick="closeModal('createVoterModal')">Cancel / Back</button>
           <button type="submit" class="btn-primary" style="flex:1;">Save Voter</button>
         </div>
       </form>
@@ -365,6 +391,6 @@
     </div>
   </div>
 
-  <script src="./admin.js?v=5.0"></script>
+  <script src="./admin.js?v=6.0"></script>
 </body>
 </html>
