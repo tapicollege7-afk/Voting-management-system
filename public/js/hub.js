@@ -118,7 +118,9 @@ function triggerPwaInstall() {
 
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
+    // Relative service worker path for GitHub Pages compatibility
+    const swPath = window.location.pathname.includes('/public/') ? './sw.js' : './public/sw.js';
+    navigator.serviceWorker.register(swPath)
       .then(reg => console.log('VotePulse Hub Service Worker registered:', reg.scope))
       .catch(err => console.warn('Service Worker registration failed:', err));
   }

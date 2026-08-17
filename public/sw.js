@@ -1,20 +1,19 @@
-const CACHE_NAME = 'votepulse-hub-v3';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/css/hub.css',
-  '/js/hub.js',
-  '/manifest.json'
+// VotePulse Hub Service Worker (v6.0)
+const CACHE_NAME = 'votepulse-hub-v6';
+const ASSETS = [
+  './',
+  './index.html',
+  './public/index.html',
+  './public/css/hub.css',
+  './public/js/hub.js',
+  './public/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching fresh Hub v3 assets');
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,23 +21,24 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', key);
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(fetch(event.request));
-  } else {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
-  }
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
+  );
 });
