@@ -138,38 +138,6 @@ function switchTab(tabId) {
   if (tabId === 'results') initResultsView();
 }
 
-// Fallback Initial Data for Static GitHub Pages
-const INITIAL_ELECTIONS = [
-  {
-    id: "ELEC-2026-01",
-    title: "General Election 2026",
-    category: "General Poll",
-    status: "active",
-    description: "Official 2026 General Election Poll"
-  }
-];
-
-const INITIAL_CANDIDATES = [
-  {
-    id: "CAND-101",
-    election_id: "ELEC-2026-01",
-    name: "Alex Rivera",
-    department: "Computer Science & Engineering",
-    party: "Progress Party",
-    manifesto: "Empowering digital innovation, transparent governance, and student welfare.",
-    vote_count: 0
-  },
-  {
-    id: "CAND-102",
-    election_id: "ELEC-2026-01",
-    name: "Jordan Smith",
-    department: "Business Administration",
-    party: "Alliance Party",
-    manifesto: "Fostering collaboration, sustainability, and career development initiatives.",
-    vote_count: 0
-  }
-];
-
 async function fetchAdminStats() {
   try {
     const res = await fetch('/api/admin/stats');
@@ -202,8 +170,8 @@ function useLocalAdminData() {
   const savedCandidates = localStorage.getItem('votepulse_admin_candidates');
   const savedVoters = localStorage.getItem('votepulse_admin_voters');
 
-  adminState.elections = savedElections ? JSON.parse(savedElections) : INITIAL_ELECTIONS;
-  adminState.candidates = savedCandidates ? JSON.parse(savedCandidates) : INITIAL_CANDIDATES;
+  adminState.elections = savedElections ? JSON.parse(savedElections) : [];
+  adminState.candidates = savedCandidates ? JSON.parse(savedCandidates) : [];
   adminState.voters = savedVoters ? JSON.parse(savedVoters) : [];
 }
 

@@ -1,4 +1,4 @@
-// Voter Module State & Real-Time Engine (Dual Localhost + GitHub Pages Support)
+// Voter Module State & Real-Time Engine (Clean Slate - No Sample Candidates)
 let state = {
   user: null,
   pendingVoterId: null,
@@ -214,12 +214,11 @@ function updateTimerDisplay() {
   if (el) el.textContent = `${m}:${s}`;
 }
 
-// Helper to generate a random 6-digit OTP code
 function generateRandomOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// 1. Handle Login (Server + GitHub Pages Fallback)
+// 1. Handle Login
 async function handleLogin(e) {
   e.preventDefault();
   const voter_id = document.getElementById('loginVoterId').value.trim();
@@ -255,7 +254,7 @@ async function handleLogin(e) {
   startOtpCountdownTimer();
 }
 
-// 2. Handle Register (Server + GitHub Pages Fallback)
+// 2. Handle Register
 async function handleRegister(e) {
   e.preventDefault();
   const voter_id = document.getElementById('regVoterId').value.trim();
@@ -320,7 +319,7 @@ async function requestResendOTP() {
   showAlert("New Real-time OTP code delivered!", 'success');
 }
 
-// 4. Verify OTP (Server + GitHub Pages Fallback)
+// 4. Verify OTP
 function handleVerifyOTP(e) {
   if (e) e.preventDefault();
   const code = getEnteredOtpCode();
@@ -348,14 +347,10 @@ async function triggerRealTimeOtpVerify(otp_code) {
         return showAlert(data.message, 'error');
       }
     } else {
-      // Fallback verification against generated OTP code
       if (otp_code === state.currentOtpCode) verified = true;
     }
   } catch (err) {
-    // Offline verification against active OTP code
-    if (otp_code === state.currentOtpCode) {
-      verified = true;
-    }
+    if (otp_code === state.currentOtpCode) verified = true;
   }
 
   if (!verified && otp_code !== state.currentOtpCode) {
@@ -401,7 +396,7 @@ function handleLogout() {
   document.getElementById('logoutBtn').style.display = 'none';
 }
 
-// 5. Load Voting Dashboard (Server + GitHub Pages Fallback)
+// 5. Load Voting Dashboard (Clean Slate - No Sample Candidates)
 async function showVotingDashboard() {
   document.getElementById('authView').style.display = 'none';
   document.getElementById('votingView').style.display = 'block';
@@ -412,60 +407,35 @@ async function showVotingDashboard() {
   await loadElections();
 }
 
-const FALLBACK_ELECTIONS = [
-  {
-    id: "ELEC-2026-01",
-    title: "General Election 2026",
-    category: "General Poll",
-    description: "Official online election poll for 2026 representation."
-  }
-];
-
-const FALLBACK_CANDIDATES = [
-  {
-    id: "CAND-101",
-    election_id: "ELEC-2026-01",
-    name: "Alex Rivera",
-    department: "Computer Science & Engineering",
-    manifesto: "Empowering digital innovation, transparent governance, and student welfare.",
-    photo_url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300"
-  },
-  {
-    id: "CAND-102",
-    election_id: "ELEC-2026-01",
-    name: "Jordan Smith",
-    department: "Business Administration",
-    manifesto: "Fostering collaboration, sustainability, and career development initiatives.",
-    photo_url: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=300"
-  },
-  {
-    id: "CAND-103",
-    election_id: "ELEC-2026-01",
-    name: "Taylor Reed",
-    department: "Electrical Engineering",
-    manifesto: "Upgrading campus infrastructure and promoting eco-friendly technology solutions.",
-    photo_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300"
-  }
-];
-
 async function loadElections() {
+  state.elections = [];
   try {
     const res = await fetch('/api/elections');
     if (res.ok) {
       const data = await res.json();
-      if (data.success && data.elections.length > 0) {
+      if (data.success && data.elections && data.elections.length > 0) {
         state.elections = data.elections;
-      } else {
-        state.elections = FALLBACK_ELECTIONS;
       }
-    } else {
-      state.elections = FALLBACK_ELECTIONS;
     }
   } catch (err) {
-    state.elections = FALLBACK_ELECTIONS;
+    const localElecs = localStorage.getItem('votepulse_admin_elections');
+    if (localElecs) {
+      try { state.elections = JSON.parse(localElecs); } catch (e) {}
+    }
   }
 
   const dropdown = document.getElementById('electionDropdown');
+
+  if (!state.elections || state.elections.length === 0) {
+    document.getElementById('electionTitle').textContent = "No Active Elections";
+    document.getElementById('electionDesc').textContent = "There are currently no active polls or elections created. Please check back when an Admin launches an election poll.";
+    document.getElementById('candidateGrid').innerHTML = '<p style="color:var(--text-muted); text-align:center; grid-column:1/-1; padding:2rem;">No candidates registered yet.</p>';
+    dropdown.innerHTML = '<option value="">-- No Active Polls --</option>';
+    document.getElementById('alreadyVotedBox').style.display = 'none';
+    document.getElementById('ballotSection').style.display = 'block';
+    return;
+  }
+
   dropdown.innerHTML = state.elections.map(e => 
     `<option value="${e.id}">${e.title}</option>`
   ).join('');
@@ -535,21 +505,29 @@ async function renderActiveElection() {
 async function loadCandidates(electionId) {
   const grid = document.getElementById('candidateGrid');
   grid.innerHTML = '<p style="color:var(--text-muted);">Loading official candidate list...</p>';
+  state.candidates = [];
 
   try {
     const res = await fetch(`/api/candidates?election_id=${electionId}`);
     if (res.ok) {
       const data = await res.json();
-      if (data.success && data.candidates.length > 0) {
+      if (data.success && data.candidates && data.candidates.length > 0) {
         state.candidates = data.candidates;
-      } else {
-        state.candidates = FALLBACK_CANDIDATES;
       }
-    } else {
-      state.candidates = FALLBACK_CANDIDATES;
     }
   } catch (err) {
-    state.candidates = FALLBACK_CANDIDATES;
+    const localCands = localStorage.getItem('votepulse_admin_candidates');
+    if (localCands) {
+      try {
+        const allLocal = JSON.parse(localCands);
+        state.candidates = allLocal.filter(c => c.election_id === electionId);
+      } catch (e) {}
+    }
+  }
+
+  if (!state.candidates || state.candidates.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted); text-align:center; grid-column:1/-1; padding:2rem;">No candidates registered for this poll yet. An admin can add candidates from the Admin Dashboard.</p>';
+    return;
   }
 
   grid.innerHTML = state.candidates.map(c => `
