@@ -490,12 +490,16 @@ async function renderActiveElection() {
   const ballotSection = document.getElementById('ballotSection');
 
   let hasVoted = localStorage.getItem(`votepulse_voted_${state.user.voter_id}_${election.id}`) === 'true';
+  let votedCandidateName = localStorage.getItem(`votepulse_voted_cand_${state.user.voter_id}_${election.id}`) || null;
 
   try {
     const statusRes = await fetch(`/api/voter/status/${state.user.voter_id}/${election.id}`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
       hasVoted = statusData.has_voted;
+      if (statusData.candidate_name) {
+        votedCandidateName = statusData.candidate_name;
+      }
     }
   } catch (err) {
     console.warn("Checking vote status via local state engine.", err);
@@ -506,13 +510,20 @@ async function renderActiveElection() {
     ballotSection.style.display = 'none';
     
     document.getElementById('voteReceiptDetails').innerHTML = `
+      <div style="background:rgba(5, 150, 105, 0.12); border:2px solid #059669; border-radius:14px; padding:1.25rem; margin-bottom:1.25rem; text-align:center;">
+        <div style="font-size:0.8rem; font-weight:800; color:#059669; text-transform:uppercase; letter-spacing:1px;">✅ CONFIRMED BALLOT SELECTION</div>
+        <div style="font-size:1.45rem; font-weight:800; color:var(--text-main); margin:6px 0;">Voted For: <span style="color:#059669;">${votedCandidateName || 'Selected Candidate'}</span></div>
+        <div style="font-size:0.85rem; color:var(--text-muted);">Verified Digital Vote Record</div>
+      </div>
       VOTER ID: ${state.user.voter_id}<br>
       ELECTION: ${election.title}<br>
+      VOTED CANDIDATE: ${votedCandidateName || 'Selected Candidate'}<br>
       STATUS: VERIFIED & SEALED<br>
+      TIMESTAMP: ${new Date().toLocaleString()}<br>
       DIGITAL RECEIPT: #${Math.floor(100000 + Math.random()*900000)}
     `;
 
-    showAlert("Notice: You have already voted in this election!", 'error');
+    showAlert(`Notice: You have already voted for ${votedCandidateName || 'your candidate'} in this election!`, 'error');
   } else {
     alreadyVotedBox.style.display = 'none';
     ballotSection.style.display = 'block';
@@ -599,10 +610,11 @@ async function submitFinalVote() {
     console.warn("Backend API offline; storing vote status locally.", err);
   }
 
-  // Record vote in persistent storage
+  // Record vote and voted candidate name in persistent storage
   localStorage.setItem(`votepulse_voted_${state.user.voter_id}_${state.activeElectionId}`, 'true');
+  localStorage.setItem(`votepulse_voted_cand_${state.user.voter_id}_${state.activeElectionId}`, state.selectedCandidate.name);
 
-  showAlert("🎉 Vote Successfully Cast & Sealed!", 'success');
+  showAlert(`🎉 Vote Successfully Cast for ${state.selectedCandidate.name}!`, 'success');
   await renderActiveElection();
 }
 

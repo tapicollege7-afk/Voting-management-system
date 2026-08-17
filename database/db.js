@@ -1,78 +1,69 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, 'data.json');
-
-// Clean Initial Seed Data (All dummy/example voter data cleared)
-const initialData = {
-  users: [
-    {
-      id: "usr_admin",
-      voter_id: "ADM-9999",
-      name: "System Administrator",
-      email: "admin@votepulse.org",
-      phone: "+1 555-0199",
-      role: "admin",
-      password_hash: "admin123",
-      created_at: new Date().toISOString()
-    }
-  ],
-  elections: [],
-  candidates: [],
-  votes: [],
-  otps: []
-};
+const DATA_FILE = path.join(__dirname, 'data.json');
 
 class Database {
   constructor() {
-    this.init();
+    this.ensureDataFile();
   }
 
-  init() {
-    const dir = path.dirname(DB_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+  ensureDataFile() {
+    if (!fs.existsSync(DATA_FILE)) {
+      const initialData = {
+        users: [
+          {
+            id: 'usr_admin',
+            voter_id: 'ADM-9999',
+            name: 'System Administrator',
+            email: 'admin@votepulse.org',
+            phone: '+1 555-0199',
+            role: 'admin',
+            password_hash: 'admin123',
+            created_at: new Date().toISOString()
+          }
+        ],
+        elections: [],
+        candidates: [],
+        votes: [],
+        otps: []
+      };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
     }
-    // Overwrite database to ensure clean production slate as requested
-    this.save(initialData);
   }
 
   load() {
     try {
-      const data = fs.readFileSync(DB_FILE, 'utf8');
-      return JSON.parse(data);
-    } catch (err) {
-      console.error("Error loading DB, resetting to initial clean slate:", err);
-      this.save(initialData);
-      return initialData;
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      return JSON.parse(raw);
+    } catch (e) {
+      return { users: [], elections: [], candidates: [], votes: [], otps: [] };
     }
   }
 
   save(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
   }
 
-  // Users
+  // Users & Auth
   findUserByVoterId(voter_id) {
     const db = this.load();
-    return db.users.find(u => u.voter_id.toUpperCase() === voter_id.toUpperCase() || u.email.toLowerCase() === voter_id.toLowerCase());
-  }
-
-  findUserById(id) {
-    const db = this.load();
-    return db.users.find(u => u.id === id);
+    return db.users.find(u => u.voter_id.toLowerCase() === voter_id.toLowerCase() || u.email.toLowerCase() === voter_id.toLowerCase());
   }
 
   createUser(userData) {
     const db = this.load();
+    if (this.findUserByVoterId(userData.voter_id)) {
+      throw new Error("Voter ID or Email already registered!");
+    }
     const newUser = {
       id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-      voter_id: userData.voter_id.toUpperCase(),
+      voter_id: userData.voter_id,
       name: userData.name,
       email: userData.email,
       phone: userData.phone || '',
       role: userData.role || 'voter',
-      password_hash: userData.password || 'default123',
+      password_hash: userData.password,
       created_at: new Date().toISOString()
     };
     db.users.push(newUser);
@@ -80,23 +71,13 @@ class Database {
     return newUser;
   }
 
-  getUsers() {
+  // OTP Management
+  generateOTP(voter_id, email, phone) {
     const db = this.load();
-    return db.users;
-  }
+    const otp_code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  // OTPs
-  createOTP(voter_id, email, phone) {
-    const db = this.load();
-    const otp_code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 min expiry
-
-    db.otps = db.otps.map(o => {
-      if (o.voter_id === voter_id) o.verified = true;
-      return o;
-    });
-
-    const newOTP = {
+    const otpRecord = {
       id: 'otp_' + Date.now(),
       voter_id,
       email,
@@ -107,25 +88,26 @@ class Database {
       created_at: new Date().toISOString()
     };
 
-    db.otps.push(newOTP);
+    db.otps.push(otpRecord);
     this.save(db);
-    return newOTP;
+    return otpRecord;
   }
 
   verifyOTP(voter_id, otp_code) {
     const db = this.load();
     const record = db.otps.find(o => 
-      o.voter_id === voter_id && 
-      o.otp_code === otp_code && 
-      !o.verified && 
+      o.voter_id.toLowerCase() === voter_id.toLowerCase() && 
+      o.otp_code === otp_code &&
+      !o.verified &&
       new Date(o.expires_at) > new Date()
     );
 
-    if (!record) return false;
-
-    record.verified = true;
-    this.save(db);
-    return true;
+    if (record) {
+      record.verified = true;
+      this.save(db);
+      return true;
+    }
+    return false;
   }
 
   // Elections
@@ -141,11 +123,15 @@ class Database {
 
   createElection(electionData) {
     const db = this.load();
+    if (db.elections.find(e => e.id === electionData.id)) {
+      throw new Error("Election ID already exists.");
+    }
+
     const newElection = {
-      id: 'elec_' + Date.now(),
+      id: electionData.id || 'elec_' + Date.now(),
       title: electionData.title,
-      description: electionData.description,
-      category: electionData.category || 'General',
+      category: electionData.category || 'General Poll',
+      description: electionData.description || '',
       start_date: electionData.start_date || new Date().toISOString(),
       end_date: electionData.end_date || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
       status: electionData.status || 'active',
@@ -179,10 +165,11 @@ class Database {
   createCandidate(candData) {
     const db = this.load();
     const newCandidate = {
-      id: 'cand_' + Date.now(),
+      id: candData.id || 'cand_' + Date.now(),
       election_id: candData.election_id,
       name: candData.name,
-      department: candData.department || 'General',
+      department: candData.department || candData.party || 'General',
+      party: candData.party || candData.department || 'Independent',
       manifesto: candData.manifesto || '',
       photo_url: candData.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300',
       vote_count: 0
@@ -192,10 +179,26 @@ class Database {
     return newCandidate;
   }
 
-  // Votes (STRICT SINGLE-VOTE ENFORCEMENT)
+  // Votes & Voted Candidate Tracking
   hasVoted(election_id, voter_id) {
     const db = this.load();
-    return db.votes.some(v => v.election_id === election_id && v.voter_id === voter_id);
+    return db.votes.some(v => v.election_id === election_id && v.voter_id.toLowerCase() === voter_id.toLowerCase());
+  }
+
+  getVoteDetails(election_id, voter_id) {
+    const db = this.load();
+    const vote = db.votes.find(v => v.election_id === election_id && v.voter_id.toLowerCase() === voter_id.toLowerCase());
+    if (!vote) return { has_voted: false };
+
+    const candidate = db.candidates.find(c => c.id === vote.candidate_id);
+    return {
+      has_voted: true,
+      candidate_id: vote.candidate_id,
+      candidate_name: candidate ? candidate.name : (vote.candidate_name || 'Selected Candidate'),
+      candidate_party: candidate ? (candidate.party || candidate.department) : 'Official Ballot',
+      timestamp: vote.timestamp,
+      receipt_id: vote.id
+    };
   }
 
   castVote(election_id, voter_id, candidate_id, ip_address = '127.0.0.1') {
@@ -215,6 +218,7 @@ class Database {
       election_id,
       voter_id,
       candidate_id,
+      candidate_name: candidate.name,
       timestamp: new Date().toISOString(),
       ip_address
     };

@@ -252,13 +252,18 @@ app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { voter_id, election_id } = req.params;
-    const hasVoted = db.hasVoted(election_id, voter_id.toUpperCase());
+    const voteDetails = db.getVoteDetails(election_id, voter_id.toUpperCase());
     res.json({
       success: true,
       voter_id: voter_id.toUpperCase(),
       election_id,
-      has_voted: hasVoted,
-      message: hasVoted ? "You have already voted in this election." : "Voter is eligible to vote."
+      has_voted: voteDetails.has_voted,
+      candidate_id: voteDetails.candidate_id || null,
+      candidate_name: voteDetails.candidate_name || null,
+      candidate_party: voteDetails.candidate_party || null,
+      timestamp: voteDetails.timestamp || null,
+      receipt_id: voteDetails.receipt_id || null,
+      message: voteDetails.has_voted ? "You have already voted in this election." : "Voter is eligible to vote."
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
