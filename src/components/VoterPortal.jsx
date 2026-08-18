@@ -13,7 +13,10 @@ export default function VoterPortal({ user, setUser }) {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // Gmail Verification State (Strict Real Gmail Inbox Only)
+  // Password Strength Meter State
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: 'Too short', class: '' });
+
+  // Gmail Verification State
   const [showGmailModal, setShowGmailModal] = useState(false);
   const [gmailTokenInput, setGmailTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
@@ -29,6 +32,7 @@ export default function VoterPortal({ user, setUser }) {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showVoteConfirmModal, setShowVoteConfirmModal] = useState(false);
   const [alertMsg, setAlertMsg] = useState(null);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   // Check saved session
   useEffect(() => {
@@ -54,9 +58,40 @@ export default function VoterPortal({ user, setUser }) {
     }
   }, [user, selectedElectionId]);
 
+  // Calculate Password Strength in Real Time
+  const calculatePasswordStrength = (pass) => {
+    if (!pass) return setPasswordStrength({ score: 0, label: '', class: '' });
+    let score = 0;
+    if (pass.length >= 6) score += 1;
+    if (pass.length >= 10) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+
+    if (score <= 2) {
+      setPasswordStrength({ score: 1, label: 'Weak Password ⚠️', class: 'strength-weak', color: '#ef4444' });
+    } else if (score <= 4) {
+      setPasswordStrength({ score: 2, label: 'Medium Password 🔒', class: 'strength-medium', color: '#f59e0b' });
+    } else {
+      setPasswordStrength({ score: 3, label: 'Strong Password 🛡️', class: 'strength-strong', color: '#10b981' });
+    }
+  };
+
+  const handlePasswordChange = (val) => {
+    setRegPassword(val);
+    calculatePasswordStrength(val);
+  };
+
   const showAlert = (msg, type = 'error') => {
     setAlertMsg({ text: msg, type });
     setTimeout(() => setAlertMsg(null), 6000);
+  };
+
+  const copyReceiptHash = () => {
+    if (!votedCaesarHash) return;
+    navigator.clipboard.writeText(votedCaesarHash);
+    setCopiedHash(true);
+    setTimeout(() => setCopiedHash(false), 3000);
   };
 
   const handleLoginSubmit = async (e) => {
@@ -77,7 +112,7 @@ export default function VoterPortal({ user, setUser }) {
 
       setPendingUser(data.user);
       setShowGmailModal(true);
-      showAlert(`Verification code dispatched! Please check your Gmail inbox at ${data.user.email}.`, 'success');
+      showAlert(`Verification code dispatched to ${data.user.email}! Please check your Gmail inbox.`, 'success');
     } catch (err) {
       showAlert("Error communicating with authentication server.");
     }
@@ -258,18 +293,19 @@ export default function VoterPortal({ user, setUser }) {
     return (
       <div className="main-container">
         {alertMsg && (
-          <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
+          <div style={{ padding: '1rem', borderRadius: '14px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: alertMsg.type === 'error' ? '#f87171' : '#34d399', border: `1px solid ${alertMsg.type === 'error' ? '#ef4444' : '#10b981'}` }}>
             {alertMsg.text}
           </div>
         )}
 
         <div className="auth-box">
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <h1 style={{ fontSize: '1.7rem', fontWeight: 800 }}>Voter Access Portal</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Gmail verification & SHA-256 encrypted access.</p>
+          <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.4rem' }}>🛡️</div>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Voter Access Portal</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Gmail token authentication & encrypted access.</p>
           </div>
 
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '10px', marginBottom: '1.5rem' }}>
+          <div className="theme-toggle-row" style={{ marginBottom: '1.75rem' }}>
             <button className={`theme-option-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => setAuthTab('login')}>Voter Login</button>
             <button className={`theme-option-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => setAuthTab('register')}>New Registration</button>
           </div>
@@ -284,7 +320,7 @@ export default function VoterPortal({ user, setUser }) {
                 <label className="form-label">Password</label>
                 <input className="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
-              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
+              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.9rem' }} type="submit">
                 Sign In & Send Code to Gmail &rarr;
               </button>
             </form>
@@ -299,7 +335,7 @@ export default function VoterPortal({ user, setUser }) {
                 <input className="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Gmail Address (For Real Email Verification)</label>
+                <label className="form-label">Gmail Address (For Real Verification Code)</label>
                 <input className="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
               </div>
               <div className="form-group">
@@ -308,22 +344,35 @@ export default function VoterPortal({ user, setUser }) {
               </div>
               <div className="form-group">
                 <label className="form-label">Create Password</label>
-                <input className="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
+                <input className="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => handlePasswordChange(e.target.value)} required />
+                
+                {/* Real-Time Password Strength Meter */}
+                {regPassword && (
+                  <div className="password-strength-container">
+                    <div className="password-strength-bar">
+                      <div className={`password-strength-fill ${passwordStrength.class}`}></div>
+                    </div>
+                    <span className="password-strength-label" style={{ color: passwordStrength.color }}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                )}
               </div>
-              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
+
+              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem' }} type="submit">
                 Register & Verify via Gmail &rarr;
               </button>
             </form>
           )}
         </div>
 
-        {/* REAL GMAIL VERIFICATION MODAL (NO CODE DISPLAY ON WEBSITE) */}
+        {/* REAL GMAIL VERIFICATION MODAL */}
         {showGmailModal && (
           <div className="modal-backdrop">
             <div className="modal-content" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📧</div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '6px 0 1.25rem 0', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📧</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '8px 0 1.5rem 0', lineHeight: 1.5 }}>
                 A verification code was dispatched to your Gmail inbox (<strong>{pendingUser?.email}</strong>). Please open your Gmail inbox to retrieve your security code.
               </p>
 
@@ -333,7 +382,7 @@ export default function VoterPortal({ user, setUser }) {
                     className="form-input"
                     type="text"
                     placeholder="Enter 6-Digit Code From Gmail"
-                    style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '3px', fontWeight: 800 }}
+                    style={{ textAlign: 'center', fontSize: '1.3rem', letterSpacing: '4px', fontWeight: 800 }}
                     value={gmailTokenInput}
                     onChange={e => setGmailTokenInput(e.target.value)}
                     required
@@ -342,7 +391,7 @@ export default function VoterPortal({ user, setUser }) {
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowGmailModal(false)}>Cancel</button>
-                  <button className="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Login &rarr;</button>
+                  <button className="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Access &rarr;</button>
                 </div>
               </form>
             </div>
@@ -358,23 +407,23 @@ export default function VoterPortal({ user, setUser }) {
   return (
     <div className="main-container">
       {/* Voter Header Tag */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '0.85rem 1.25rem', borderRadius: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', padding: '1rem 1.5rem', borderRadius: '18px' }}>
         <div>
           <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Voter: </span>
           <span style={{ color: 'var(--accent-emerald)', fontWeight: 800 }}>{user.name} ({user.voter_id})</span>
         </div>
-        <button className="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Sign Out</button>
+        <button className="btn btn-secondary" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }} onClick={handleLogout}>Sign Out</button>
       </div>
 
       {alertMsg && (
-        <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
+        <div style={{ padding: '1rem', borderRadius: '14px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: alertMsg.type === 'error' ? '#f87171' : '#34d399', border: `1px solid ${alertMsg.type === 'error' ? '#ef4444' : '#10b981'}` }}>
           {alertMsg.text}
         </div>
       )}
 
       {/* Active Poll Selector */}
       {elections.length === 0 ? (
-        <div className="already-voted-box" style={{ borderColor: 'var(--card-border)' }}>
+        <div className="already-voted-box">
           <h2>No Active Elections</h2>
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>There are currently no active polls or elections created. Please check back when an Administrator launches an election poll.</p>
         </div>
@@ -383,12 +432,12 @@ export default function VoterPortal({ user, setUser }) {
           <div className="portal-card" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>SELECTED ELECTION POLL</span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '4px 0' }}>{selectedElection?.title}</h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedElection?.description}</p>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>SELECTED ELECTION POLL</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '4px 0' }}>{selectedElection?.title}</h2>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{selectedElection?.description}</p>
               </div>
 
-              <select className="form-input" style={{ width: 'auto', minWidth: '220px' }} value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
+              <select className="form-input" style={{ width: 'auto', minWidth: '240px' }} value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
                 {elections.map(e => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
@@ -399,32 +448,36 @@ export default function VoterPortal({ user, setUser }) {
           {/* Already Voted Screen vs Candidate Grid */}
           {hasVoted ? (
             <div className="already-voted-box">
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🛡️</div>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginBottom: '0.5rem' }}>Cryptographically Sealed Ballot</h2>
-              <p style={{ color: 'var(--text-main)', marginBottom: '1.25rem' }}>Your vote is sealed in the database with Caesar Cipher shift encryption and SHA-256 hashing.</p>
+              <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🛡️</div>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.5rem' }}>Cryptographically Sealed Ballot</h2>
+              <p style={{ color: 'var(--text-main)', marginBottom: '1.5rem' }}>Your vote is sealed in the database with Caesar Cipher shift encryption and SHA-256 hashing.</p>
 
-              <div style={{ background: 'rgba(5, 150, 105, 0.12)', border: '2px solid #059669', borderRadius: '14px', padding: '1.25rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '1px' }}>✅ CONFIRMED BALLOT SELECTION</div>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', margin: '6px 0' }}>Voted For: <span style={{ color: '#059669' }}>{votedCandidateName || 'Selected Candidate'}</span></div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Verified Digital Vote Record</div>
+              <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '2px solid var(--accent-emerald)', borderRadius: '18px', padding: '1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '1px' }}>✅ CONFIRMED BALLOT SELECTION</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: '8px 0' }}>Voted For: <span style={{ color: 'var(--accent-emerald)' }}>{votedCandidateName || 'Selected Candidate'}</span></div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Verified Single-Instance Digital Record</div>
               </div>
 
-              <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', background: 'rgba(0,0,0,0.04)', padding: '1rem', borderRadius: '10px', textAlign: 'left', color: 'var(--text-main)', maxWidth: '520px', margin: '0 auto' }}>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.88rem', background: 'rgba(0,0,0,0.25)', padding: '1.25rem', borderRadius: '14px', textAlign: 'left', color: 'var(--text-main)', maxWidth: '540px', margin: '0 auto 1.25rem auto', border: '1px solid var(--border-glass)' }}>
                 VOTER ID: {user.voter_id}<br />
                 ELECTION: {selectedElection?.title}<br />
                 VOTED CANDIDATE: {votedCandidateName || 'Selected Candidate'}<br />
                 CAESAR CIPHER HASH: <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{votedCaesarHash || 'ENCRYPTED_SHIFT_3'}</span><br />
-                SHA-256 SEAL: <span style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>{votedSha256Hash || 'a4f8b9...'}</span><br />
+                SHA-256 SEAL: <span style={{ fontSize: '0.78rem', wordBreak: 'break-all' }}>{votedSha256Hash || 'a4f8b9...'}</span><br />
                 TIMESTAMP: {new Date().toLocaleString()}
               </div>
+
+              <button className="btn btn-secondary" style={{ padding: '0.6rem 1.25rem' }} onClick={copyReceiptHash}>
+                {copiedHash ? '✅ Receipt Hash Copied!' : '📋 Copy Caesar Cipher Receipt Hash'}
+              </button>
             </div>
           ) : (
             <div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>Official Ballot Candidates</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>Review the candidate details below and cast your encrypted vote.</p>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Official Ballot Candidates</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.5rem' }}>Review the candidate details below and cast your encrypted vote.</p>
 
               {candidates.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '14px', color: 'var(--text-muted)' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '18px', color: 'var(--text-muted)' }}>
                   No candidates registered for this poll yet. An administrator can register candidates from the Admin Console.
                 </div>
               ) : (
@@ -457,10 +510,10 @@ export default function VoterPortal({ user, setUser }) {
       {showVoteConfirmModal && selectedCandidate && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗳️</div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Confirm Your Encrypted Ballot Selection</h2>
+            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🗳️</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Confirm Your Encrypted Ballot Selection</h2>
             <p style={{ margin: '1rem 0', fontSize: '1rem' }}>Are you sure you want to cast your single vote for:</p>
-            <div style={{ background: 'rgba(37, 99, 235, 0.1)', border: '1px solid #2563eb', padding: '1rem', borderRadius: '12px', fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '14px', fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '1.5rem' }}>
               {selectedCandidate.name} ({selectedCandidate.department})
             </div>
 

@@ -19,6 +19,16 @@
       "role": "voter",
       "password_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
       "created_at": "2026-08-18T12:31:08.748Z"
+    },
+    {
+      "id": "usr_1787056910136_desy",
+      "voter_id": "fas",
+      "name": "sfsfsfs",
+      "email": "tapicollege7@gmail.com",
+      "phone": "",
+      "role": "voter",
+      "password_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "created_at": "2026-08-18T12:41:50.137Z"
     }
   ],
   "elections": [],
@@ -34,6 +44,15 @@
       "expires_at": "2026-08-18T12:41:08.750Z",
       "verified": true,
       "created_at": "2026-08-18T12:31:08.750Z"
+    },
+    {
+      "id": "tok_1787056910137",
+      "voter_id": "fas",
+      "email": "tapicollege7@gmail.com",
+      "token_code": "606211",
+      "expires_at": "2026-08-18T12:51:50.137Z",
+      "verified": false,
+      "created_at": "2026-08-18T12:41:50.137Z"
     }
   ]
 }
