@@ -28,7 +28,10 @@ const noCacheOptions = {
   }
 };
 
-// Serve Static Apps with No-Cache Headers
+// Serve Static React App & Public Assets with No-Cache Headers
+if (require('fs').existsSync(path.join(__dirname, 'dist'))) {
+  app.use('/', express.static(path.join(__dirname, 'dist'), noCacheOptions));
+}
 app.use('/', express.static(path.join(__dirname, 'public'), noCacheOptions));
 app.use('/voter', express.static(path.join(__dirname, 'public', 'voter'), noCacheOptions));
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin'), noCacheOptions));
@@ -363,12 +366,14 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
 
-// Fallback for SPA routing
-app.get('/voter/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'voter', 'index.html'));
-});
-app.get('/admin/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+// Fallback for React SPA routing
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  const distIndex = path.join(__dirname, 'dist', 'index.html');
+  if (require('fs').existsSync(distIndex)) {
+    return res.sendFile(distIndex);
+  }
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start Server
