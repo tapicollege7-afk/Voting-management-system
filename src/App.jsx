@@ -17,10 +17,11 @@ export default function App() {
   };
 
   const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
-  const [theme, setTheme] = useState(localStorage.getItem('votepulse_theme') || 'light');
+  const [theme, setTheme] = useState(localStorage.getItem('votepulse_theme') || 'dark');
   const [fontScale, setFontScale] = useState(parseFloat(localStorage.getItem('votepulse_font_scale') || '1'));
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // In-Memory Sessions (Cleared on Route Change / Back Navigation)
   const [voterUser, setVoterUser] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
 
@@ -34,11 +35,21 @@ export default function App() {
     localStorage.setItem('votepulse_font_scale', fontScale.toString());
   }, [fontScale]);
 
+  // Navigate with strict session auto-logout on back navigation / route change
+  const navigateTo = (newRoute) => {
+    // Clear sessions when leaving module or returning home
+    setVoterUser(null);
+    setAdminUser(null);
+    localStorage.removeItem('votepulse_voter');
+    localStorage.removeItem('votepulse_admin');
+    setCurrentRoute(newRoute);
+  };
+
   return (
     <div>
       <Navbar
         currentRoute={currentRoute}
-        navigateTo={setCurrentRoute}
+        navigateTo={navigateTo}
         theme={theme}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
@@ -46,7 +57,7 @@ export default function App() {
       <main>
         {currentRoute === 'hub' && (
           <HubGateway
-            navigateTo={setCurrentRoute}
+            navigateTo={navigateTo}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
         )}

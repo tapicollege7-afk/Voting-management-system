@@ -37,8 +37,8 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
         </p>
       </section>
 
-      {/* Portal Gateway Cards (Clean Public Voter Access & Preferences) */}
-      <section className="portal-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      {/* Portal Gateway Cards */}
+      <section className="portal-grid">
         {/* Voter App Card */}
         <div className="portal-card">
           <div>
@@ -54,6 +54,24 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
           </div>
           <button className="btn btn-emerald" onClick={() => navigateTo('voter')}>
             Open Voter App &rarr;
+          </button>
+        </div>
+
+        {/* Admin Access Card */}
+        <div className="portal-card" style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}>
+          <div>
+            <div className="card-icon">⚡</div>
+            <h2 className="card-title">Admin Console</h2>
+            <p className="card-desc">For election commissioners to launch polls, manage candidates, and export reports.</p>
+            <ul className="feature-list">
+              <li>Authorized Administrator Sign In</li>
+              <li>Election Poll CRUD & Lifecycle Control</li>
+              <li>Candidate Registration & Voter Directory</li>
+              <li>Live Tally Charts & CSV Data Exporter</li>
+            </ul>
+          </div>
+          <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #d97706, #b45309)', boxShadow: '0 4px 15px rgba(217, 119, 6, 0.3)' }} onClick={() => navigateTo('admin')}>
+            Open Admin Portal &rarr;
           </button>
         </div>
 
