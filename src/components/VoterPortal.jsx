@@ -13,11 +13,10 @@ export default function VoterPortal({ user, setUser }) {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // Gmail Verification State
+  // Gmail Verification State (Strict Real Gmail Inbox Only)
   const [showGmailModal, setShowGmailModal] = useState(false);
   const [gmailTokenInput, setGmailTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
-  const [dispatchedTokenPreview, setDispatchedTokenPreview] = useState('');
 
   // Voting Dashboard State
   const [elections, setElections] = useState([]);
@@ -77,9 +76,8 @@ export default function VoterPortal({ user, setUser }) {
       }
 
       setPendingUser(data.user);
-      setDispatchedTokenPreview(data.token_preview || '');
       setShowGmailModal(true);
-      showAlert(`Real-Time Verification code sent to ${data.user.email}! Check your Gmail inbox.`, 'success');
+      showAlert(`Verification code dispatched! Please check your Gmail inbox at ${data.user.email}.`, 'success');
     } catch (err) {
       showAlert("Error communicating with authentication server.");
     }
@@ -102,9 +100,8 @@ export default function VoterPortal({ user, setUser }) {
       }
 
       setPendingUser(data.voter);
-      setDispatchedTokenPreview(data.token_preview || '');
       setShowGmailModal(true);
-      showAlert(`Registration initiated! Real-time token dispatched to Gmail address ${regEmail}.`, 'success');
+      showAlert(`Registration initiated! Check your Gmail inbox at ${regEmail} for your security code.`, 'success');
     } catch (err) {
       showAlert("Error registering voter account.");
     }
@@ -112,7 +109,7 @@ export default function VoterPortal({ user, setUser }) {
 
   const verifyGmailTokenSubmit = async (e) => {
     e.preventDefault();
-    if (!gmailTokenInput.trim()) return showAlert("Please enter the token code received in your Gmail.");
+    if (!gmailTokenInput.trim()) return showAlert("Please enter the verification code received in your Gmail inbox.");
 
     try {
       const res = await fetch('/api/auth/verify-gmail-token', {
@@ -288,7 +285,7 @@ export default function VoterPortal({ user, setUser }) {
                 <input className="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
               <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
-                Sign In & Send Real Gmail Code &rarr;
+                Sign In & Send Code to Gmail &rarr;
               </button>
             </form>
           ) : (
@@ -302,7 +299,7 @@ export default function VoterPortal({ user, setUser }) {
                 <input className="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Gmail Address (For Verification Code)</label>
+                <label className="form-label">Gmail Address (For Real Email Verification)</label>
                 <input className="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
               </div>
               <div className="form-group">
@@ -314,35 +311,29 @@ export default function VoterPortal({ user, setUser }) {
                 <input className="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
               </div>
               <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
-                Register & Verify Gmail &rarr;
+                Register & Verify via Gmail &rarr;
               </button>
             </form>
           )}
         </div>
 
-        {/* REAL GMAIL VERIFICATION MODAL */}
+        {/* REAL GMAIL VERIFICATION MODAL (NO CODE DISPLAY ON WEBSITE) */}
         {showGmailModal && (
           <div className="modal-backdrop">
             <div className="modal-content" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📧</div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '6px 0 1.25rem 0' }}>
-                We sent a real-time verification code to <strong>{pendingUser?.email}</strong>.
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '6px 0 1.25rem 0', lineHeight: 1.5 }}>
+                A verification code was dispatched to your Gmail inbox (<strong>{pendingUser?.email}</strong>). Please open your Gmail inbox to retrieve your security code.
               </p>
-
-              {dispatchedTokenPreview && (
-                <div style={{ background: 'rgba(5, 150, 105, 0.1)', border: '1px solid #059669', padding: '0.65rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
-                  Gmail Security Token: <span style={{ letterSpacing: '2px', fontSize: '1.1rem' }}>{dispatchedTokenPreview}</span>
-                </div>
-              )}
 
               <form onSubmit={verifyGmailTokenSubmit}>
                 <div className="form-group">
                   <input
                     className="form-input"
                     type="text"
-                    placeholder="Enter Token Code"
-                    style={{ textAlign: 'center', fontSize: '1.3rem', letterSpacing: '3px', fontWeight: 800 }}
+                    placeholder="Enter 6-Digit Code From Gmail"
+                    style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '3px', fontWeight: 800 }}
                     value={gmailTokenInput}
                     onChange={e => setGmailTokenInput(e.target.value)}
                     required

@@ -72,8 +72,7 @@ app.post('/api/auth/register', validateVoterRegistration, async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         phone: newUser.phone
-      },
-      token_preview: gmailToken.token_code
+      }
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -110,8 +109,7 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role
-      },
-      token_preview: gmailToken.token_code
+      }
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -356,10 +354,22 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start Server (No Hardcoded Localhost)
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`===================================================`);
   console.log(`  VotePulse Secure E-Voting Server Running (Port ${PORT})`);
   console.log(`  Production Ready API & Static React SPA Active`);
   console.log(`===================================================`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    const ALT_PORT = 3001;
+    console.log(`\n⚠️ Port ${PORT} is currently busy. Switching to Port ${ALT_PORT}...`);
+    app.listen(ALT_PORT, () => {
+      console.log(`===================================================`);
+      console.log(`  VotePulse Secure E-Voting Server Running (Port ${ALT_PORT})`);
+      console.log(`  Access online at: http://localhost:${ALT_PORT}`);
+      console.log(`===================================================`);
+    });
+  } else {
+    console.error("Server error:", err);
+  }
 });

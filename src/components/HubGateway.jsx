@@ -33,12 +33,12 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
         <div className="hero-badge">🔒 Real-Time Gmail Verification & Caesar-Cipher Encrypted Voting</div>
         <h1 className="hero-title">Online Voting & Election Management System</h1>
         <p className="hero-description">
-          An enterprise e-Voting engine featuring real-time Gmail token authentication, strict server-side single-vote enforcement, Caesar-Cipher & SHA-256 cryptographic sealing, and public ballot verification.
+          An enterprise e-Voting engine featuring real-time Gmail token authentication, strict server-side single-vote enforcement, and Caesar-Cipher & SHA-256 cryptographic sealing.
         </p>
       </section>
 
-      {/* Portal Gateway Cards (Admin Dashboard REMOVED from Central Hub) */}
-      <section className="portal-grid">
+      {/* Portal Gateway Cards (Clean Public Voter Access & Preferences) */}
+      <section className="portal-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         {/* Voter App Card */}
         <div className="portal-card">
           <div>
@@ -54,24 +54,6 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
           </div>
           <button className="btn btn-emerald" onClick={() => navigateTo('voter')}>
             Open Voter App &rarr;
-          </button>
-        </div>
-
-        {/* Cryptographic Ballot Audit Tool Card (New Feature) */}
-        <div className="portal-card">
-          <div>
-            <div className="card-icon">🔍</div>
-            <h2 className="card-title">Cryptographic Ballot Audit</h2>
-            <p className="card-desc">Independent public verification tool for voters to audit their encrypted ballot seal.</p>
-            <ul className="feature-list">
-              <li>Verify Caesar Cipher Shift Hashes</li>
-              <li>Inspect SHA-256 Cryptographic Seals</li>
-              <li>Confirm Un-Altered Database Vote Records</li>
-              <li>Instant Public Transparency & Auditability</li>
-            </ul>
-          </div>
-          <button className="btn btn-primary" onClick={() => navigateTo('audit')}>
-            Audit Ballot Hash &rarr;
           </button>
         </div>
 

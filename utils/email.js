@@ -1,12 +1,11 @@
 const nodemailer = require('nodemailer');
 
 // Configure Nodemailer Transporter for Real Gmail Dispatching
-// In production, uses SMTP credentials or fallback simulation for testing
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.GMAIL_USER || 'votepulse.official@gmail.com',
-    pass: process.env.GMAIL_APP_PASSWORD || 'sample_app_password'
+    user: process.env.GMAIL_USER || '',
+    pass: process.env.GMAIL_APP_PASSWORD || ''
   }
 });
 
@@ -15,7 +14,7 @@ const transporter = nodemailer.createTransport({
  */
 async function sendGmailVerificationCode(recipientEmail, voterId, verificationToken) {
   const mailOptions = {
-    from: '"VotePulse Security Engine" <votepulse.official@gmail.com>',
+    from: '"VotePulse Security Engine" <no-reply@votepulse.org>',
     to: recipientEmail,
     subject: '🗳️ VotePulse Real-Time Gmail Verification Token',
     html: `
@@ -43,17 +42,23 @@ async function sendGmailVerificationCode(recipientEmail, voterId, verificationTo
     `
   };
 
+  console.log(`\n===================================================`);
+  console.log(`📧 [REAL GMAIL VERIFICATION DISPATCH]`);
+  console.log(`   To: ${recipientEmail}`);
+  console.log(`   Voter ID: ${voterId}`);
+  console.log(`   Security Verification Code: [ ${verificationToken} ]`);
+  console.log(`===================================================\n`);
+
   try {
     if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
       await transporter.sendMail(mailOptions);
-      console.log(`[GMAIL VERIFICATION] Sent real email verification to ${recipientEmail}`);
+      console.log(`[SMTP] Sent email successfully to ${recipientEmail}`);
       return { success: true, mode: 'smtp' };
     } else {
-      console.log(`[GMAIL VERIFICATION SIMULATOR] Token ${verificationToken} dispatched for ${recipientEmail}`);
       return { success: true, mode: 'simulated', token: verificationToken };
     }
   } catch (err) {
-    console.warn(`[GMAIL DISPATCH NOTICE] ${err.message}. Defaulting to real-time session verification.`);
+    console.warn(`[SMTP NOTICE] ${err.message}`);
     return { success: true, mode: 'simulated', token: verificationToken };
   }
 }

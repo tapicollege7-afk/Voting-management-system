@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BallotAuditTool from './BallotAuditTool';
 
 export default function AdminConsole({ adminUser, setAdminUser }) {
   const [adminId, setAdminId] = useState('');
@@ -323,6 +324,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         <button className={`theme-option-btn ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>👤 Candidates ({candidates.length})</button>
         <button className={`theme-option-btn ${activeTab === 'voters' ? 'active' : ''}`} onClick={() => setActiveTab('voters')}>👥 Voters Directory</button>
         <button className={`theme-option-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>📈 Live Tally & Reports</button>
+        <button className={`theme-option-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}>🔍 Internal Ballot Audit</button>
       </div>
 
       {/* TAB 1: OVERVIEW */}
@@ -533,6 +535,11 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 6: INTERNAL BALLOT AUDIT (Admin Internal Use Only) */}
+      {activeTab === 'audit' && (
+        <BallotAuditTool />
       )}
 
       {/* CREATE ELECTION MODAL */}
