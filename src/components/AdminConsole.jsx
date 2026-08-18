@@ -242,14 +242,14 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   // Render Login Modal if not authenticated as Admin
   if (!adminUser) {
     return (
-      <div class="main-container">
+      <div className="main-container">
         {alertMsg && (
           <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
             {alertMsg.text}
           </div>
         )}
 
-        <div class="auth-box">
+        <div className="auth-box">
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚡</div>
             <h1 style={{ fontSize: '1.7rem', fontWeight: 800 }}>Admin Console Sign In</h1>
@@ -257,15 +257,15 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
           </div>
 
           <form onSubmit={handleAdminLogin}>
-            <div class="form-group">
-              <label class="form-label">Administrator ID</label>
-              <input class="form-input" type="text" placeholder="ADM-9999" value={adminId} onChange={e => setAdminId(e.target.value)} required />
+            <div className="form-group">
+              <label className="form-label">Administrator ID</label>
+              <input className="form-input" type="text" placeholder="ADM-9999" value={adminId} onChange={e => setAdminId(e.target.value)} required />
             </div>
-            <div class="form-group">
-              <label class="form-label">Password</label>
-              <input class="form-input" type="password" placeholder="••••••••" value={adminPass} onChange={e => setAdminPass(e.target.value)} required />
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input className="form-input" type="password" placeholder="••••••••" value={adminPass} onChange={e => setAdminPass(e.target.value)} required />
             </div>
-            <button class="btn btn-primary" style={{ width: '100%', padding: '0.85rem' }} type="submit">
+            <button className="btn btn-primary" style={{ width: '100%', padding: '0.85rem' }} type="submit">
               Access Admin Dashboard &rarr;
             </button>
           </form>
@@ -280,14 +280,14 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   const totalResultVotes = selectedResultCandidates.reduce((sum, c) => sum + (c.vote_count || 0), 0);
 
   return (
-    <div class="main-container">
+    <div className="main-container">
       {/* Admin Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '0.85rem 1.25rem', borderRadius: '12px' }}>
         <div>
           <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Admin Session: </span>
           <span style={{ color: '#d97706', fontWeight: 800 }}>{adminUser.id}</span>
         </div>
-        <button class="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Logout</button>
+        <button className="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Logout</button>
       </div>
 
       {alertMsg && (
@@ -297,37 +297,37 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
       )}
 
       {/* Overview Metric Cards */}
-      <div class="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div class="stat-item">
-          <div class="stat-number">{stats.active_elections}</div>
-          <div class="stat-label">Active Elections</div>
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="stat-item">
+          <div className="stat-number">{stats.active_elections}</div>
+          <div className="stat-label">Active Elections</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">{stats.total_candidates}</div>
-          <div class="stat-label">Registered Candidates</div>
+        <div className="stat-item">
+          <div className="stat-number">{stats.total_candidates}</div>
+          <div className="stat-label">Registered Candidates</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">{stats.total_voters}</div>
-          <div class="stat-label">Registered Voters</div>
+        <div className="stat-item">
+          <div className="stat-number">{stats.total_voters}</div>
+          <div className="stat-label">Registered Voters</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-number" style={{ color: '#d97706' }}>{stats.total_votes_cast}</div>
-          <div class="stat-label">Total Votes Cast</div>
+        <div className="stat-item">
+          <div className="stat-number" style={{ color: '#d97706' }}>{stats.total_votes_cast}</div>
+          <div className="stat-label">Total Votes Cast</div>
         </div>
       </div>
 
       {/* Admin Navigation Tabs */}
       <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '12px', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        <button class={`theme-option-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>📊 Overview</button>
-        <button class={`theme-option-btn ${activeTab === 'elections' ? 'active' : ''}`} onClick={() => setActiveTab('elections')}>🗳️ Elections ({elections.length})</button>
-        <button class={`theme-option-btn ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>👤 Candidates ({candidates.length})</button>
-        <button class={`theme-option-btn ${activeTab === 'voters' ? 'active' : ''}`} onClick={() => setActiveTab('voters')}>👥 Voters Directory</button>
-        <button class={`theme-option-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>📈 Live Tally & Reports</button>
+        <button className={`theme-option-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>📊 Overview</button>
+        <button className={`theme-option-btn ${activeTab === 'elections' ? 'active' : ''}`} onClick={() => setActiveTab('elections')}>🗳️ Elections ({elections.length})</button>
+        <button className={`theme-option-btn ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>👤 Candidates ({candidates.length})</button>
+        <button className={`theme-option-btn ${activeTab === 'voters' ? 'active' : ''}`} onClick={() => setActiveTab('voters')}>👥 Voters Directory</button>
+        <button className={`theme-option-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>📈 Live Tally & Reports</button>
       </div>
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
-        <div class="portal-card">
+        <div className="portal-card">
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>Active Election Summary</h2>
           {elections.length === 0 ? (
             <p style={{ color: 'var(--text-muted)' }}>No elections configured. Go to Elections tab to create a poll.</p>
@@ -354,11 +354,11 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Elections Lifecycle</h2>
-            <button class="btn btn-primary" onClick={() => setShowCreateElectionModal(true)}>+ Create New Election</button>
+            <button className="btn btn-primary" onClick={() => setShowCreateElectionModal(true)}>+ Create New Election</button>
           </div>
 
-          <div class="table-container">
-            <table class="table">
+          <div className="table-container">
+            <table className="table">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -380,9 +380,9 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                       <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', background: e.status === 'active' ? '#ecfdf5' : '#f1f5f9', color: e.status === 'active' ? '#047857' : '#64748b' }}>{e.status}</span></td>
                       <td>
                         {e.status === 'active' ? (
-                          <button class="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>Close Poll</button>
+                          <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>Close Poll</button>
                         ) : (
-                          <button class="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>Activate</button>
+                          <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>Activate</button>
                         )}
                       </td>
                     </tr>
@@ -399,11 +399,11 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Candidate Directory</h2>
-            <button class="btn btn-primary" onClick={() => setShowCreateCandModal(true)}>+ Register New Candidate</button>
+            <button className="btn btn-primary" onClick={() => setShowCreateCandModal(true)}>+ Register New Candidate</button>
           </div>
 
-          <div class="table-container">
-            <table class="table">
+          <div className="table-container">
+            <table className="table">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -424,7 +424,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                       <td>{c.party || c.department}</td>
                       <td>{c.election_id}</td>
                       <td>
-                        <button class="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem', color: 'var(--danger)' }} onClick={() => deleteCandidate(c.id)}>Remove</button>
+                        <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem', color: 'var(--danger)' }} onClick={() => deleteCandidate(c.id)}>Remove</button>
                       </td>
                     </tr>
                   ))
@@ -440,11 +440,11 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Registered Voters Directory</h2>
-            <button class="btn btn-primary" onClick={() => setShowCreateVoterModal(true)}>+ Register New Voter</button>
+            <button className="btn btn-primary" onClick={() => setShowCreateVoterModal(true)}>+ Register New Voter</button>
           </div>
 
-          <div class="table-container">
-            <table class="table">
+          <div className="table-container">
+            <table className="table">
               <thead>
                 <tr>
                   <th>Voter ID</th>
@@ -484,22 +484,22 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <select class="form-input" style={{ width: 'auto' }} value={selectedResultElectionId} onChange={e => setSelectedResultElectionId(e.target.value)}>
+              <select className="form-input" style={{ width: 'auto' }} value={selectedResultElectionId} onChange={e => setSelectedResultElectionId(e.target.value)}>
                 {elections.map(e => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
               </select>
 
-              <button class="btn btn-emerald" onClick={exportCSV}>
+              <button className="btn btn-emerald" onClick={exportCSV}>
                 📥 Export CSV Report
               </button>
             </div>
           </div>
 
           {!selectedResultElection ? (
-            <div class="already-voted-box">No election poll selected.</div>
+            <div className="already-voted-box">No election poll selected.</div>
           ) : (
-            <div class="portal-card">
+            <div className="portal-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem' }}>
                 <div>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{selectedResultElection.title}</h3>
@@ -537,33 +537,33 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
 
       {/* CREATE ELECTION MODAL */}
       {showCreateElectionModal && (
-        <div class="modal-backdrop">
-          <div class="modal-content">
+        <div className="modal-backdrop">
+          <div className="modal-content">
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Create New Election</h2>
             <form onSubmit={handleCreateElection}>
-              <div class="form-group">
-                <label class="form-label">Election ID</label>
-                <input class="form-input" type="text" placeholder="ELEC-2026-01" value={elecId} onChange={e => setElecId(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Election ID</label>
+                <input className="form-input" type="text" placeholder="ELEC-2026-01" value={elecId} onChange={e => setElecId(e.target.value)} />
               </div>
-              <div class="form-group">
-                <label class="form-label">Election Title</label>
-                <input class="form-input" type="text" placeholder="General Election 2026" value={elecTitle} onChange={e => setElecTitle(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Election Title</label>
+                <input className="form-input" type="text" placeholder="General Election 2026" value={elecTitle} onChange={e => setElecTitle(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Category</label>
-                <select class="form-input" value={elecCategory} onChange={e => setElecCategory(e.target.value)}>
+              <div className="form-group">
+                <label className="form-label">Category</label>
+                <select className="form-input" value={elecCategory} onChange={e => setElecCategory(e.target.value)}>
                   <option value="General Poll">General Poll</option>
                   <option value="Departmental Poll">Departmental Poll</option>
                   <option value="Executive Council">Executive Council</option>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea class="form-input" rows={3} placeholder="Election details..." value={elecDesc} onChange={e => setElecDesc(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea className="form-input" rows={3} placeholder="Election details..." value={elecDesc} onChange={e => setElecDesc(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button class="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateElectionModal(false)}>Cancel</button>
-                <button class="btn btn-primary" style={{ flex: 1 }} type="submit">Create & Activate &rarr;</button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateElectionModal(false)}>Cancel</button>
+                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Create & Activate &rarr;</button>
               </div>
             </form>
           </div>
@@ -572,35 +572,35 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
 
       {/* CREATE CANDIDATE MODAL */}
       {showCreateCandModal && (
-        <div class="modal-backdrop">
-          <div class="modal-content">
+        <div className="modal-backdrop">
+          <div className="modal-content">
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Register New Candidate</h2>
             <form onSubmit={handleCreateCandidate}>
-              <div class="form-group">
-                <label class="form-label">Target Election Poll</label>
-                <select class="form-input" value={candElectionId} onChange={e => setCandElectionId(e.target.value)}>
+              <div className="form-group">
+                <label className="form-label">Target Election Poll</label>
+                <select className="form-input" value={candElectionId} onChange={e => setCandElectionId(e.target.value)}>
                   {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label">Candidate ID</label>
-                <input class="form-input" type="text" placeholder="CAND-101" value={candId} onChange={e => setCandId(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Candidate ID</label>
+                <input className="form-input" type="text" placeholder="CAND-101" value={candId} onChange={e => setCandId(e.target.value)} />
               </div>
-              <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input class="form-input" type="text" placeholder="Candidate Name" value={candName} onChange={e => setCandName(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" type="text" placeholder="Candidate Name" value={candName} onChange={e => setCandName(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Party / Department</label>
-                <input class="form-input" type="text" placeholder="Progress Party / Computer Science" value={candParty} onChange={e => setCandParty(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Party / Department</label>
+                <input className="form-input" type="text" placeholder="Progress Party / Computer Science" value={candParty} onChange={e => setCandParty(e.target.value)} />
               </div>
-              <div class="form-group">
-                <label class="form-label">Manifesto Statement</label>
-                <textarea class="form-input" rows={2} placeholder="Empowering innovation..." value={candManifesto} onChange={e => setCandManifesto(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Manifesto Statement</label>
+                <textarea className="form-input" rows={2} placeholder="Empowering innovation..." value={candManifesto} onChange={e => setCandManifesto(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button class="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateCandModal(false)}>Cancel</button>
-                <button class="btn btn-primary" style={{ flex: 1 }} type="submit">Register Candidate &rarr;</button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateCandModal(false)}>Cancel</button>
+                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Register Candidate &rarr;</button>
               </div>
             </form>
           </div>
@@ -609,25 +609,25 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
 
       {/* CREATE VOTER MODAL */}
       {showCreateVoterModal && (
-        <div class="modal-backdrop">
-          <div class="modal-content">
+        <div className="modal-backdrop">
+          <div className="modal-content">
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Register New Voter</h2>
             <form onSubmit={handleCreateVoter}>
-              <div class="form-group">
-                <label class="form-label">Voter ID</label>
-                <input class="form-input" type="text" placeholder="VOT-9900" value={newVoterId} onChange={e => setNewVoterId(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Voter ID</label>
+                <input className="form-input" type="text" placeholder="VOT-9900" value={newVoterId} onChange={e => setNewVoterId(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input class="form-input" type="text" placeholder="Voter Name" value={newVoterName} onChange={e => setNewVoterName(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" type="text" placeholder="Voter Name" value={newVoterName} onChange={e => setNewVoterName(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Email</label>
-                <input class="form-input" type="email" placeholder="voter@example.com" value={newVoterEmail} onChange={e => setNewVoterEmail(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input className="form-input" type="email" placeholder="voter@example.com" value={newVoterEmail} onChange={e => setNewVoterEmail(e.target.value)} required />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button class="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateVoterModal(false)}>Cancel</button>
-                <button class="btn btn-primary" style={{ flex: 1 }} type="submit">Save Voter &rarr;</button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateVoterModal(false)}>Cancel</button>
+                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Save Voter &rarr;</button>
               </div>
             </form>
           </div>

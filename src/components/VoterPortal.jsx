@@ -13,7 +13,7 @@ export default function VoterPortal({ user, setUser }) {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // Gmail Verification State (Replaces 6-digit OTP)
+  // Gmail Verification State
   const [showGmailModal, setShowGmailModal] = useState(false);
   const [gmailTokenInput, setGmailTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
@@ -259,61 +259,61 @@ export default function VoterPortal({ user, setUser }) {
   // Render Login / Register View if not logged in
   if (!user) {
     return (
-      <div class="main-container">
+      <div className="main-container">
         {alertMsg && (
           <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
             {alertMsg.text}
           </div>
         )}
 
-        <div class="auth-box">
+        <div className="auth-box">
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <h1 style={{ fontSize: '1.7rem', fontWeight: 800 }}>Voter Access Portal</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Gmail verification & SHA-256 encrypted access.</p>
           </div>
 
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '10px', marginBottom: '1.5rem' }}>
-            <button class={`theme-option-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => setAuthTab('login')}>Voter Login</button>
-            <button class={`theme-option-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => setAuthTab('register')}>New Registration</button>
+            <button className={`theme-option-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => setAuthTab('login')}>Voter Login</button>
+            <button className={`theme-option-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => setAuthTab('register')}>New Registration</button>
           </div>
 
           {authTab === 'login' ? (
             <form onSubmit={handleLoginSubmit}>
-              <div class="form-group">
-                <label class="form-label">Voter ID / Registered Gmail</label>
-                <input class="form-input" type="text" placeholder="e.g. voter@gmail.com" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Voter ID / Registered Gmail</label>
+                <input className="form-input" type="text" placeholder="e.g. voter@gmail.com" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Password</label>
-                <input class="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input className="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
-              <button class="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
+              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
                 Sign In & Send Real Gmail Code &rarr;
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegisterSubmit}>
-              <div class="form-group">
-                <label class="form-label">Voter ID</label>
-                <input class="form-input" type="text" placeholder="e.g. VOT-8899" value={regVoterId} onChange={e => setRegVoterId(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Voter ID</label>
+                <input className="form-input" type="text" placeholder="e.g. VOT-8899" value={regVoterId} onChange={e => setRegVoterId(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input class="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Gmail Address (For Verification Code)</label>
-                <input class="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Gmail Address (For Verification Code)</label>
+                <input className="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
               </div>
-              <div class="form-group">
-                <label class="form-label">Mobile Phone (Optional)</label>
-                <input class="form-input" type="tel" placeholder="+1 555-0199" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Mobile Phone (Optional)</label>
+                <input className="form-input" type="tel" placeholder="+1 555-0199" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
               </div>
-              <div class="form-group">
-                <label class="form-label">Create Password</label>
-                <input class="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
+              <div className="form-group">
+                <label className="form-label">Create Password</label>
+                <input className="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
               </div>
-              <button class="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
+              <button className="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
                 Register & Verify Gmail &rarr;
               </button>
             </form>
@@ -322,8 +322,8 @@ export default function VoterPortal({ user, setUser }) {
 
         {/* REAL GMAIL VERIFICATION MODAL */}
         {showGmailModal && (
-          <div class="modal-backdrop">
-            <div class="modal-content" style={{ textAlign: 'center' }}>
+          <div className="modal-backdrop">
+            <div className="modal-content" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📧</div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '6px 0 1.25rem 0' }}>
@@ -337,9 +337,9 @@ export default function VoterPortal({ user, setUser }) {
               )}
 
               <form onSubmit={verifyGmailTokenSubmit}>
-                <div class="form-group">
+                <div className="form-group">
                   <input
-                    class="form-input"
+                    className="form-input"
                     type="text"
                     placeholder="Enter Token Code"
                     style={{ textAlign: 'center', fontSize: '1.3rem', letterSpacing: '3px', fontWeight: 800 }}
@@ -350,8 +350,8 @@ export default function VoterPortal({ user, setUser }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button class="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowGmailModal(false)}>Cancel</button>
-                  <button class="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Login &rarr;</button>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowGmailModal(false)}>Cancel</button>
+                  <button className="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Login &rarr;</button>
                 </div>
               </form>
             </div>
@@ -365,14 +365,14 @@ export default function VoterPortal({ user, setUser }) {
   const selectedElection = elections.find(e => e.id === selectedElectionId);
 
   return (
-    <div class="main-container">
+    <div className="main-container">
       {/* Voter Header Tag */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '0.85rem 1.25rem', borderRadius: '12px' }}>
         <div>
           <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Voter: </span>
           <span style={{ color: 'var(--accent-emerald)', fontWeight: 800 }}>{user.name} ({user.voter_id})</span>
         </div>
-        <button class="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Sign Out</button>
+        <button className="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Sign Out</button>
       </div>
 
       {alertMsg && (
@@ -383,13 +383,13 @@ export default function VoterPortal({ user, setUser }) {
 
       {/* Active Poll Selector */}
       {elections.length === 0 ? (
-        <div class="already-voted-box" style={{ borderColor: 'var(--card-border)' }}>
+        <div className="already-voted-box" style={{ borderColor: 'var(--card-border)' }}>
           <h2>No Active Elections</h2>
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>There are currently no active polls or elections created. Please check back when an Administrator launches an election poll.</p>
         </div>
       ) : (
         <>
-          <div class="portal-card" style={{ marginBottom: '2rem' }}>
+          <div className="portal-card" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>SELECTED ELECTION POLL</span>
@@ -397,7 +397,7 @@ export default function VoterPortal({ user, setUser }) {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedElection?.description}</p>
               </div>
 
-              <select class="form-input" style={{ width: 'auto', minWidth: '220px' }} value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
+              <select className="form-input" style={{ width: 'auto', minWidth: '220px' }} value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
                 {elections.map(e => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
@@ -407,7 +407,7 @@ export default function VoterPortal({ user, setUser }) {
 
           {/* Already Voted Screen vs Candidate Grid */}
           {hasVoted ? (
-            <div class="already-voted-box">
+            <div className="already-voted-box">
               <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🛡️</div>
               <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginBottom: '0.5rem' }}>Cryptographically Sealed Ballot</h2>
               <p style={{ color: 'var(--text-main)', marginBottom: '1.25rem' }}>Your vote is sealed in the database with Caesar Cipher shift encryption and SHA-256 hashing.</p>
@@ -437,19 +437,19 @@ export default function VoterPortal({ user, setUser }) {
                   No candidates registered for this poll yet. An administrator can register candidates from the Admin Console.
                 </div>
               ) : (
-                <div class="candidate-grid">
+                <div className="candidate-grid">
                   {candidates.map(c => (
-                    <div key={c.id} class="candidate-card">
-                      <div class="candidate-img-box">
-                        <img src={c.photo_url} alt={c.name} class="candidate-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300'; }} />
+                    <div key={c.id} className="candidate-card">
+                      <div className="candidate-img-box">
+                        <img src={c.photo_url} alt={c.name} className="candidate-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300'; }} />
                       </div>
-                      <div class="candidate-body">
+                      <div className="candidate-body">
                         <div>
-                          <h3 class="candidate-name">{c.name}</h3>
-                          <div class="candidate-dept">{c.department}</div>
-                          <p class="candidate-manifesto">"{c.manifesto}"</p>
+                          <h3 className="candidate-name">{c.name}</h3>
+                          <div className="candidate-dept">{c.department}</div>
+                          <p className="candidate-manifesto">"{c.manifesto}"</p>
                         </div>
-                        <button class="btn btn-primary" style={{ width: '100%' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
+                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
                           Vote for Candidate
                         </button>
                       </div>
@@ -464,8 +464,8 @@ export default function VoterPortal({ user, setUser }) {
 
       {/* VOTE CONFIRMATION MODAL */}
       {showVoteConfirmModal && selectedCandidate && (
-        <div class="modal-backdrop">
-          <div class="modal-content" style={{ textAlign: 'center' }}>
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗳️</div>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Confirm Your Encrypted Ballot Selection</h2>
             <p style={{ margin: '1rem 0', fontSize: '1rem' }}>Are you sure you want to cast your single vote for:</p>
@@ -474,8 +474,8 @@ export default function VoterPortal({ user, setUser }) {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button class="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowVoteConfirmModal(false)}>Cancel</button>
-              <button class="btn btn-emerald" style={{ flex: 1 }} onClick={submitVote}>Confirm & Seal Vote &rarr;</button>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowVoteConfirmModal(false)}>Cancel</button>
+              <button className="btn btn-emerald" style={{ flex: 1 }} onClick={submitVote}>Confirm & Seal Vote &rarr;</button>
             </div>
           </div>
         </div>

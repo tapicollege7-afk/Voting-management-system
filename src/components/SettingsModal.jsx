@@ -23,25 +23,25 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme, fontSc
   };
 
   return (
-    <div class="modal-backdrop">
-      <div class="modal-content">
+    <div className="modal-backdrop">
+      <div className="modal-content">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>⚙️ System Settings</h2>
-          <button class="icon-btn" onClick={onClose} style={{ border: 'none' }}>✕</button>
+          <button className="icon-btn" onClick={onClose} style={{ border: 'none' }}>✕</button>
         </div>
 
         {/* Section 1: Appearance & Theme */}
         <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1.25rem' }}>
           <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem' }}>🎨 Appearance & Display</div>
-          <div class="theme-toggle-row">
+          <div className="theme-toggle-row">
             <button
-              class={`theme-option-btn ${theme === 'light' ? 'active' : ''}`}
+              className={`theme-option-btn ${theme === 'light' ? 'active' : ''}`}
               onClick={() => setTheme('light')}
             >
               ☀️ Light Mode
             </button>
             <button
-              class={`theme-option-btn ${theme === 'dark' ? 'active' : ''}`}
+              className={`theme-option-btn ${theme === 'dark' ? 'active' : ''}`}
               onClick={() => setTheme('dark')}
             >
               🌙 Dark Mode
@@ -53,9 +53,9 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme, fontSc
         <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1.25rem' }}>
           <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem' }}>🔍 Text Font Scaling</div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button class={`btn btn-secondary ${fontScale === 1 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1)}>100%</button>
-            <button class={`btn btn-secondary ${fontScale === 1.15 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1.15)}>115%</button>
-            <button class={`btn btn-secondary ${fontScale === 1.3 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1.3)}>130%</button>
+            <button className={`btn btn-secondary ${fontScale === 1 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1)}>100%</button>
+            <button className={`btn btn-secondary ${fontScale === 1.15 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1.15)}>115%</button>
+            <button className={`btn btn-secondary ${fontScale === 1.3 ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.5rem' }} onClick={() => setFontScale(1.3)}>130%</button>
           </div>
         </div>
 
@@ -74,7 +74,7 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme, fontSc
 
         {/* Clear Cache */}
         <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
-          <button class="btn btn-secondary" style={{ color: 'var(--danger)', fontSize: '0.85rem' }} onClick={clearCache}>
+          <button className="btn btn-secondary" style={{ color: 'var(--danger)', fontSize: '0.85rem' }} onClick={clearCache}>
             🗑️ Clear Saved Local Preferences
           </button>
         </div>

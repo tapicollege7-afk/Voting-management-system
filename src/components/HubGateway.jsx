@@ -27,92 +27,92 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
   };
 
   return (
-    <div class="main-container">
+    <div className="main-container">
       {/* Hero Section */}
-      <section class="hero">
-        <div class="hero-badge">🔒 Real-Time Gmail Verification & Caesar-Cipher Encrypted Voting</div>
-        <h1 class="hero-title">Online Voting & Election Management System</h1>
-        <p class="hero-description">
+      <section className="hero">
+        <div className="hero-badge">🔒 Real-Time Gmail Verification & Caesar-Cipher Encrypted Voting</div>
+        <h1 className="hero-title">Online Voting & Election Management System</h1>
+        <p className="hero-description">
           An enterprise e-Voting engine featuring real-time Gmail token authentication, strict server-side single-vote enforcement, Caesar-Cipher & SHA-256 cryptographic sealing, and public ballot verification.
         </p>
       </section>
 
       {/* Portal Gateway Cards (Admin Dashboard REMOVED from Central Hub) */}
-      <section class="portal-grid">
+      <section className="portal-grid">
         {/* Voter App Card */}
-        <div class="portal-card">
+        <div className="portal-card">
           <div>
-            <div class="card-icon">🗳️</div>
-            <h2 class="card-title">Voter Portal</h2>
-            <p class="card-desc">For registered voters to cast secure, single-instance votes with real-time Gmail email verification.</p>
-            <ul class="feature-list">
+            <div className="card-icon">🗳️</div>
+            <h2 className="card-title">Voter Portal</h2>
+            <p className="card-desc">For registered voters to cast secure, single-instance votes with real-time Gmail email verification.</p>
+            <ul className="feature-list">
               <li>Real Gmail Address Verification</li>
               <li>Caesar Cipher & SHA-256 Sealed Receipts</li>
               <li>Interactive Digital Ballot & Candidate Profiles</li>
               <li>Strict Duplicate-Vote Protection ("Already Voted" Screen)</li>
             </ul>
           </div>
-          <button class="btn btn-emerald" onClick={() => navigateTo('voter')}>
+          <button className="btn btn-emerald" onClick={() => navigateTo('voter')}>
             Open Voter App &rarr;
           </button>
         </div>
 
         {/* Cryptographic Ballot Audit Tool Card (New Feature) */}
-        <div class="portal-card">
+        <div className="portal-card">
           <div>
-            <div class="card-icon">🔍</div>
-            <h2 class="card-title">Cryptographic Ballot Audit</h2>
-            <p class="card-desc">Independent public verification tool for voters to audit their encrypted ballot seal.</p>
-            <ul class="feature-list">
+            <div className="card-icon">🔍</div>
+            <h2 className="card-title">Cryptographic Ballot Audit</h2>
+            <p className="card-desc">Independent public verification tool for voters to audit their encrypted ballot seal.</p>
+            <ul className="feature-list">
               <li>Verify Caesar Cipher Shift Hashes</li>
               <li>Inspect SHA-256 Cryptographic Seals</li>
               <li>Confirm Un-Altered Database Vote Records</li>
               <li>Instant Public Transparency & Auditability</li>
             </ul>
           </div>
-          <button class="btn btn-primary" onClick={() => navigateTo('audit')}>
+          <button className="btn btn-primary" onClick={() => navigateTo('audit')}>
             Audit Ballot Hash &rarr;
           </button>
         </div>
 
         {/* System Settings Card */}
-        <div class="portal-card">
+        <div className="portal-card">
           <div>
-            <div class="card-icon">⚙️</div>
-            <h2 class="card-title">Preferences & Display Settings</h2>
-            <p class="card-desc">Customize system theme, text scaling, and display preferences.</p>
-            <ul class="feature-list">
+            <div className="card-icon">⚙️</div>
+            <h2 className="card-title">Preferences & Display Settings</h2>
+            <p className="card-desc">Customize system theme, text scaling, and display preferences.</p>
+            <ul className="feature-list">
               <li>Light Mode ☀️ & Dark Mode 🌙 System Switch</li>
               <li>Text Font Scale Settings (100% to 130%)</li>
               <li>Responsive Desktop & Mobile Display</li>
               <li>Real-Time Session Management</li>
             </ul>
           </div>
-          <button class="btn btn-secondary" onClick={onOpenSettings}>
+          <button className="btn btn-secondary" onClick={onOpenSettings}>
             ⚙️ Open Settings Menu
           </button>
         </div>
       </section>
 
       {/* Live System Metrics Section */}
-      <section class="stats-section">
-        <h2 class="stats-title">Live System Metrics & Performance</h2>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-number">{stats.total_voters}</div>
-            <div class="stat-label">Registered Voters</div>
+      <section className="stats-section">
+        <h2 className="stats-title">Live System Metrics & Performance</h2>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-number">{stats.total_voters}</div>
+            <div className="stat-label">Registered Voters</div>
           </div>
-          <div class="stat-item">
-            <div class="stat-number">{stats.active_elections}</div>
-            <div class="stat-label">Active Elections</div>
+          <div className="stat-item">
+            <div className="stat-number">{stats.active_elections}</div>
+            <div className="stat-label">Active Elections</div>
           </div>
-          <div class="stat-item">
-            <div class="stat-number">{stats.total_candidates}</div>
-            <div class="stat-label">Verified Candidates</div>
+          <div className="stat-item">
+            <div className="stat-number">{stats.total_candidates}</div>
+            <div className="stat-label">Verified Candidates</div>
           </div>
-          <div class="stat-item">
-            <div class="stat-number">{stats.total_votes_cast}</div>
-            <div class="stat-label">Total Votes Cast</div>
+          <div className="stat-item">
+            <div className="stat-number">{stats.total_votes_cast}</div>
+            <div className="stat-label">Total Votes Cast</div>
           </div>
         </div>
       </section>
