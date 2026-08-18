@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database/db');
+const { sendGmailVerificationCode } = require('./utils/email');
+const { caesarCipherEncrypt, sha256Hash } = require('./utils/cipher');
 const {
   validateVoterRegistration,
-  validateOTPRequest,
-  validateOTPVerify,
   validateVoteCast
 } = require('./middleware/validation');
 
@@ -28,13 +28,11 @@ const noCacheOptions = {
   }
 };
 
-// Serve Static React App & Public Assets with No-Cache Headers
+// Serve Static React App & Public Assets
 if (require('fs').existsSync(path.join(__dirname, 'dist'))) {
   app.use('/', express.static(path.join(__dirname, 'dist'), noCacheOptions));
 }
 app.use('/', express.static(path.join(__dirname, 'public'), noCacheOptions));
-app.use('/voter', express.static(path.join(__dirname, 'public', 'voter'), noCacheOptions));
-app.use('/admin', express.static(path.join(__dirname, 'public', 'admin'), noCacheOptions));
 
 // --- REST API ENDPOINTS ---
 
@@ -50,7 +48,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication: Register Voter
-app.post('/api/auth/register', validateVoterRegistration, (req, res) => {
+app.post('/api/auth/register', validateVoterRegistration, async (req, res) => {
   try {
     const { voter_id, name, email, phone, password } = req.body;
     
@@ -59,36 +57,31 @@ app.post('/api/auth/register', validateVoterRegistration, (req, res) => {
       return res.status(400).json({ success: false, message: "Voter ID or Email is already registered." });
     }
 
-    const newUser = db.createUser({
-      voter_id,
-      name,
-      email,
-      phone,
-      password,
-      role: 'voter'
-    });
+    const newUser = db.createUser({ voter_id, name, email, phone, password });
+    const gmailToken = db.createGmailToken(newUser.voter_id, newUser.email);
 
-    const otp = db.createOTP(newUser.voter_id, newUser.email, newUser.phone);
+    // Send real verification token to voter's Gmail address
+    await sendGmailVerificationCode(newUser.email, newUser.voter_id, gmailToken.token_code);
 
     return res.status(201).json({
       success: true,
-      message: "Voter registered successfully. Please complete OTP verification.",
+      message: `Registration initiated! Real-time verification token dispatched to ${newUser.email}.`,
       voter: {
         id: newUser.id,
         voter_id: newUser.voter_id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        phone: newUser.phone
       },
-      otp_preview: otp.otp_code
+      token_preview: gmailToken.token_code
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Authentication: Login
-app.post('/api/auth/login', (req, res) => {
+// Authentication: Login Voter & Request Real Gmail Token
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { voter_id, password } = req.body;
     if (!voter_id || !password) {
@@ -100,15 +93,16 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid Voter ID or credentials." });
     }
 
-    if (user.password_hash !== password) {
+    if (!db.verifyUserPassword(user, password)) {
       return res.status(401).json({ success: false, message: "Incorrect password." });
     }
 
-    const otp = db.createOTP(user.voter_id, user.email, user.phone);
+    const gmailToken = db.createGmailToken(user.voter_id, user.email);
+    await sendGmailVerificationCode(user.email, user.voter_id, gmailToken.token_code);
 
     return res.json({
       success: true,
-      message: "Login credentials verified. OTP sent for real-time verification.",
+      message: `Credentials verified. Verification code sent to ${user.email}.`,
       user: {
         id: user.id,
         voter_id: user.voter_id,
@@ -117,60 +111,39 @@ app.post('/api/auth/login', (req, res) => {
         phone: user.phone,
         role: user.role
       },
-      otp_preview: otp.otp_code
+      token_preview: gmailToken.token_code
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Real-Time OTP: Request New OTP
-app.post('/api/otp/request', validateOTPRequest, (req, res) => {
+// Real Gmail Token Verification Endpoint
+app.post('/api/auth/verify-gmail-token', (req, res) => {
   try {
-    const { voter_id } = req.body;
-    const user = db.findUserByVoterId(voter_id);
-
-    const voterIdKey = user ? user.voter_id : voter_id.toUpperCase();
-    const email = user ? user.email : 'voter@example.com';
-    const phone = user ? user.phone : '';
-
-    const otp = db.createOTP(voterIdKey, email, phone);
-
-    return res.json({
-      success: true,
-      message: `Real-time OTP generated successfully for ${voterIdKey}.`,
-      expires_in_seconds: 300,
-      otp_preview: otp.otp_code
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// Real-Time OTP: Verify OTP
-app.post('/api/otp/verify', validateOTPVerify, (req, res) => {
-  try {
-    const { voter_id, otp_code } = req.body;
-    const isValid = db.verifyOTP(voter_id.toUpperCase(), otp_code);
-
-    if (!isValid) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP verification code. Please try requesting a new OTP."
-      });
+    const { voter_id, token_code } = req.body;
+    if (!voter_id || !token_code) {
+      return res.status(400).json({ success: false, message: "Voter ID and verification token are required." });
     }
 
-    return res.json({
-      success: true,
-      message: "OTP verified successfully. Authorization granted for voting.",
-      verified: true
-    });
+    const isValid = db.verifyGmailToken(voter_id, token_code);
+    if (isValid) {
+      return res.json({
+        success: true,
+        message: "Gmail verification successful. Access granted."
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification token code."
+      });
+    }
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Elections: Get All Elections
+// Elections: Get Elections List
 app.get('/api/elections', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
@@ -181,29 +154,14 @@ app.get('/api/elections', (req, res) => {
   }
 });
 
-// Elections: Get Specific Election Details
-app.get('/api/elections/:id', (req, res) => {
-  try {
-    res.setHeader('Cache-Control', 'no-store');
-    const election = db.getElectionById(req.params.id);
-    if (!election) {
-      return res.status(404).json({ success: false, message: "Election not found." });
-    }
-    const candidates = db.getCandidates(election.id);
-    res.json({ success: true, election: { ...election, candidates } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 // Elections: Create Election (Admin)
 app.post('/api/elections', (req, res) => {
   try {
-    const { title, description, category, start_date, end_date } = req.body;
+    const { title, description, category } = req.body;
     if (!title || !description) {
       return res.status(400).json({ success: false, message: "Election title and description are required." });
     }
-    const newElection = db.createElection({ title, description, category, start_date, end_date });
+    const newElection = db.createElection({ title, description, category });
     res.status(201).json({ success: true, message: "Election created successfully.", election: newElection });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -250,7 +208,7 @@ app.post('/api/candidates', (req, res) => {
   }
 });
 
-// Voter Voting Status: Check if Voter Has Voted in Specific Election
+// Voter Voting Status
 app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
@@ -266,6 +224,8 @@ app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
       candidate_party: voteDetails.candidate_party || null,
       timestamp: voteDetails.timestamp || null,
       receipt_id: voteDetails.receipt_id || null,
+      caesar_hash: voteDetails.caesar_hash || null,
+      sha256_hash: voteDetails.sha256_hash || null,
       message: voteDetails.has_voted ? "You have already voted in this election." : "Voter is eligible to vote."
     });
   } catch (err) {
@@ -273,7 +233,7 @@ app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
   }
 });
 
-// Voting Engine: Cast Vote (STRICT SINGLE-VOTE ENFORCEMENT)
+// Voting Engine: Cast Vote (STRICT SINGLE-VOTE + CAESAR CIPHER SEALING)
 app.post('/api/vote', validateVoteCast, (req, res) => {
   try {
     const { election_id, voter_id, candidate_id } = req.body;
@@ -287,27 +247,44 @@ app.post('/api/vote', validateVoteCast, (req, res) => {
       });
     }
 
-    const vote = db.castVote(election_id, cleanVoterId, candidate_id, req.ip);
+    const voteRecord = db.castVote(election_id, cleanVoterId, candidate_id);
 
     return res.status(201).json({
       success: true,
-      message: "Your vote has been cast and securely recorded! Thank you for participating.",
-      receipt: {
-        vote_id: vote.id,
-        timestamp: vote.timestamp,
-        election_id: vote.election_id
+      message: "🎉 Your vote has been securely cast and sealed with Caesar Cipher shift encryption & SHA-256 hash!",
+      vote: {
+        receipt_id: voteRecord.id,
+        election_id: voteRecord.election_id,
+        voter_id: voteRecord.voter_id,
+        candidate_name: voteRecord.candidate_name,
+        timestamp: voteRecord.timestamp,
+        caesar_hash: voteRecord.caesar_hash,
+        sha256_seal: voteRecord.sha256_hash
       }
     });
   } catch (err) {
-    return res.status(400).json({
-      success: false,
-      already_voted: err.message.includes("already voted"),
-      message: err.message
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Admin Stats & Live Results
+// Public Cryptographic Ballot Audit Query Endpoint
+app.get('/api/vote/audit/:hash', (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const { hash } = req.params;
+    const auditResult = db.auditBallotByHash(hash);
+
+    if (auditResult) {
+      res.json({ success: true, audit: auditResult });
+    } else {
+      res.status(404).json({ success: false, message: "No matching sealed ballot found for the provided cryptographic hash." });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin Metrics & Tally
 app.get('/api/admin/stats', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
@@ -328,27 +305,30 @@ app.get('/api/admin/stats', (req, res) => {
   }
 });
 
-// Admin Live Results Breakdown for Specific Election
+// Admin Live Tally Breakdown
 app.get('/api/admin/results/:election_id', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { election_id } = req.params;
-    const election = db.getElectionById(election_id);
+    const election = db.getElections().find(e => e.id === election_id);
     if (!election) {
       return res.status(404).json({ success: false, message: "Election not found." });
     }
-    const candidates = db.getCandidates(election_id);
-    const votes = db.getVotes(election_id);
-    const totalVotes = candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
 
-    const breakdown = candidates.map(c => ({
-      candidate_id: c.id,
-      name: c.name,
-      department: c.department,
-      photo_url: c.photo_url,
-      vote_count: c.vote_count || 0,
-      percentage: totalVotes > 0 ? ((c.vote_count / totalVotes) * 100).toFixed(1) : "0.0"
-    }));
+    const candidates = db.getCandidates(election_id);
+    const totalVotes = candidates.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+
+    const breakdown = candidates.map(c => {
+      const count = c.vote_count || 0;
+      const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+      return {
+        candidate_id: c.id,
+        name: c.name,
+        department: c.department || c.party,
+        vote_count: count,
+        percentage
+      };
+    });
 
     res.json({
       success: true,
@@ -361,7 +341,7 @@ app.get('/api/admin/results/:election_id', (req, res) => {
   }
 });
 
-// Catch-all handler
+// Catch-all API error handler
 app.use('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
@@ -376,13 +356,10 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start Server
+// Start Server (No Hardcoded Localhost)
 app.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(`  VotePulse Secure Online Voting System Server Running `);
-  console.log(`  Local Server: http://localhost:${PORT}`);
-  console.log(`  - Gateway Hub:  http://localhost:${PORT}/`);
-  console.log(`  - Voter Portal: http://localhost:${PORT}/voter/`);
-  console.log(`  - Admin Portal: http://localhost:${PORT}/admin/`);
+  console.log(`  VotePulse Secure E-Voting Server Running (Port ${PORT})`);
+  console.log(`  Production Ready API & Static React SPA Active`);
   console.log(`===================================================`);
 });

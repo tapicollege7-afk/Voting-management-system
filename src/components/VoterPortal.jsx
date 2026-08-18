@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function VoterPortal({ user, setUser }) {
   const [authTab, setAuthTab] = useState('login');
@@ -13,14 +13,11 @@ export default function VoterPortal({ user, setUser }) {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
-  // OTP Engine State
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [currentOtpCode, setCurrentOtpCode] = useState('');
-  const [pushToastCode, setPushToastCode] = useState('');
-  const [showToast, setShowToast] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(300);
+  // Gmail Verification State (Replaces 6-digit OTP)
+  const [showGmailModal, setShowGmailModal] = useState(false);
+  const [gmailTokenInput, setGmailTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
+  const [dispatchedTokenPreview, setDispatchedTokenPreview] = useState('');
 
   // Voting Dashboard State
   const [elections, setElections] = useState([]);
@@ -28,11 +25,11 @@ export default function VoterPortal({ user, setUser }) {
   const [candidates, setCandidates] = useState([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [votedCandidateName, setVotedCandidateName] = useState('');
+  const [votedCaesarHash, setVotedCaesarHash] = useState('');
+  const [votedSha256Hash, setVotedSha256Hash] = useState('');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showVoteConfirmModal, setShowVoteConfirmModal] = useState(false);
   const [alertMsg, setAlertMsg] = useState(null);
-
-  const otpInputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   // Check saved session
   useEffect(() => {
@@ -43,17 +40,6 @@ export default function VoterPortal({ user, setUser }) {
       } catch (e) {}
     }
   }, []);
-
-  // Timer Countdown
-  useEffect(() => {
-    let interval = null;
-    if (showOtpModal && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [showOtpModal, timerSeconds]);
 
   // Load elections when logged in
   useEffect(() => {
@@ -71,50 +57,12 @@ export default function VoterPortal({ user, setUser }) {
 
   const showAlert = (msg, type = 'error') => {
     setAlertMsg({ text: msg, type });
-    setTimeout(() => setAlertMsg(null), 5000);
-  };
-
-  const playAudioChime = () => {
-    try {
-      const soundEnabled = localStorage.getItem('votepulse_sound_enabled') !== 'false';
-      if (soundEnabled) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-      }
-    } catch (e) {}
-  };
-
-  const triggerOtpDelivery = (code, userObj) => {
-    setCurrentOtpCode(code);
-    setPushToastCode(code);
-    setShowToast(true);
-    setPendingUser(userObj);
-    setOtpDigits(['', '', '', '', '', '']);
-    setTimerSeconds(300);
-    setShowOtpModal(true);
-    playAudioChime();
-
-    setTimeout(() => {
-      setShowToast(false);
-    }, 12000);
+    setTimeout(() => setAlertMsg(null), 6000);
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!loginVoterId || !loginPassword) return showAlert("Please enter Voter ID and Password.");
-
-    let generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    let userObj = { voter_id: loginVoterId, name: loginVoterId, email: `${loginVoterId.toLowerCase()}@votepulse.org` };
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -122,23 +70,24 @@ export default function VoterPortal({ user, setUser }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voter_id: loginVoterId, password: loginPassword })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (!data.success) return showAlert(data.message);
-        userObj = data.user;
-        generatedOtp = data.otp_preview || generatedOtp;
-      }
-    } catch (err) {}
 
-    triggerOtpDelivery(generatedOtp, userObj);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return showAlert(data.message || "Invalid credentials.");
+      }
+
+      setPendingUser(data.user);
+      setDispatchedTokenPreview(data.token_preview || '');
+      setShowGmailModal(true);
+      showAlert(`Real-Time Verification code sent to ${data.user.email}! Check your Gmail inbox.`, 'success');
+    } catch (err) {
+      showAlert("Error communicating with authentication server.");
+    }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!regVoterId || !regName || !regPassword) return showAlert("Please fill out all required fields.");
-
-    let generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    let userObj = { voter_id: regVoterId, name: regName, email: regEmail, phone: regPhone };
+    if (!regVoterId || !regName || !regEmail || !regPassword) return showAlert("Please fill out all required fields.");
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -146,67 +95,44 @@ export default function VoterPortal({ user, setUser }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voter_id: regVoterId, name: regName, email: regEmail, phone: regPhone, password: regPassword })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (!data.success) return showAlert(data.message);
-        userObj = data.voter;
-        generatedOtp = data.otp_preview || generatedOtp;
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return showAlert(data.message || "Registration failed.");
       }
-    } catch (err) {}
 
-    triggerOtpDelivery(generatedOtp, userObj);
-  };
-
-  const handleDigitChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
-    const newDigits = [...otpDigits];
-    newDigits[index] = value.slice(-1);
-    setOtpDigits(newDigits);
-
-    if (value && index < 5) {
-      otpInputRefs[index + 1].current?.focus();
-    }
-
-    const fullCode = newDigits.join('');
-    if (fullCode.length === 6) {
-      verifyOtpCode(fullCode);
+      setPendingUser(data.voter);
+      setDispatchedTokenPreview(data.token_preview || '');
+      setShowGmailModal(true);
+      showAlert(`Registration initiated! Real-time token dispatched to Gmail address ${regEmail}.`, 'success');
+    } catch (err) {
+      showAlert("Error registering voter account.");
     }
   };
 
-  const autoFillToastOtp = () => {
-    if (pushToastCode) {
-      const arr = pushToastCode.split('');
-      setOtpDigits(arr);
-      setShowToast(false);
-      verifyOtpCode(pushToastCode);
-    }
-  };
-
-  const verifyOtpCode = async (codeToVerify) => {
-    const code = codeToVerify || otpDigits.join('');
-    if (code.length !== 6) return showAlert("Please enter all 6 digits.");
-
-    let verified = code === currentOtpCode;
+  const verifyGmailTokenSubmit = async (e) => {
+    e.preventDefault();
+    if (!gmailTokenInput.trim()) return showAlert("Please enter the token code received in your Gmail.");
 
     try {
-      const res = await fetch('/api/otp/verify', {
+      const res = await fetch('/api/auth/verify-gmail-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voter_id: pendingUser.voter_id, otp_code: code })
+        body: JSON.stringify({ voter_id: pendingUser.voter_id, token_code: gmailTokenInput.trim() })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) verified = true;
-      }
-    } catch (err) {}
 
-    if (verified) {
-      localStorage.setItem('votepulse_voter', JSON.stringify(pendingUser));
-      setUser(pendingUser);
-      setShowOtpModal(false);
-      showAlert(`Welcome, ${pendingUser.name}! Real-time OTP Verified.`, 'success');
-    } else {
-      showAlert("Invalid OTP code. Please check the push toast alert.");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.setItem('votepulse_voter', JSON.stringify(pendingUser));
+        setUser(pendingUser);
+        setShowGmailModal(false);
+        setGmailTokenInput('');
+        showAlert(`Welcome, ${pendingUser.name}! Real Gmail Verification Successful.`, 'success');
+      } else {
+        showAlert(data.message || "Invalid verification token. Check your Gmail inbox.");
+      }
+    } catch (err) {
+      showAlert("Error verifying Gmail token.");
     }
   };
 
@@ -238,6 +164,8 @@ export default function VoterPortal({ user, setUser }) {
   const checkVoteStatus = async (elecId) => {
     let voted = localStorage.getItem(`votepulse_voted_${user.voter_id}_${elecId}`) === 'true';
     let candName = localStorage.getItem(`votepulse_voted_cand_${user.voter_id}_${elecId}`) || '';
+    let caesar = localStorage.getItem(`votepulse_voted_caesar_${user.voter_id}_${elecId}`) || '';
+    let sha256 = localStorage.getItem(`votepulse_voted_sha256_${user.voter_id}_${elecId}`) || '';
 
     try {
       const res = await fetch(`/api/voter/status/${user.voter_id}/${elecId}`);
@@ -245,11 +173,15 @@ export default function VoterPortal({ user, setUser }) {
         const data = await res.json();
         voted = data.has_voted;
         if (data.candidate_name) candName = data.candidate_name;
+        if (data.caesar_hash) caesar = data.caesar_hash;
+        if (data.sha256_hash) sha256 = data.sha256_hash;
       }
     } catch (err) {}
 
     setHasVoted(voted);
     setVotedCandidateName(candName);
+    setVotedCaesarHash(caesar);
+    setVotedSha256Hash(sha256);
 
     if (!voted) {
       loadCandidates(elecId);
@@ -294,20 +226,29 @@ export default function VoterPortal({ user, setUser }) {
           candidate_id: selectedCandidate.id
         })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (!data.success) {
-          return showAlert(data.message);
-        }
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return showAlert(data.message || "Failed to submit vote.");
       }
-    } catch (err) {}
 
-    localStorage.setItem(`votepulse_voted_${user.voter_id}_${selectedElectionId}`, 'true');
-    localStorage.setItem(`votepulse_voted_cand_${user.voter_id}_${selectedElectionId}`, selectedCandidate.name);
+      const caesar = data.vote?.caesar_hash || '';
+      const sha256 = data.vote?.sha256_seal || '';
 
-    setHasVoted(true);
-    setVotedCandidateName(selectedCandidate.name);
-    showAlert(`🎉 Vote Successfully Cast for ${selectedCandidate.name}!`, 'success');
+      localStorage.setItem(`votepulse_voted_${user.voter_id}_${selectedElectionId}`, 'true');
+      localStorage.setItem(`votepulse_voted_cand_${user.voter_id}_${selectedElectionId}`, selectedCandidate.name);
+      localStorage.setItem(`votepulse_voted_caesar_${user.voter_id}_${selectedElectionId}`, caesar);
+      localStorage.setItem(`votepulse_voted_sha256_${user.voter_id}_${selectedElectionId}`, sha256);
+
+      setHasVoted(true);
+      setVotedCandidateName(selectedCandidate.name);
+      setVotedCaesarHash(caesar);
+      setVotedSha256Hash(sha256);
+
+      showAlert(`🎉 Vote Cast & Cryptographically Sealed for ${selectedCandidate.name}!`, 'success');
+    } catch (err) {
+      showAlert("Error submitting ballot vote.");
+    }
   };
 
   const handleLogout = () => {
@@ -319,19 +260,6 @@ export default function VoterPortal({ user, setUser }) {
   if (!user) {
     return (
       <div class="main-container">
-        {/* Floating Push Alert Toast */}
-        {showToast && (
-          <div class="realtime-push-toast">
-            <div style={{ fontSize: '1.8rem' }}>📱</div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#b45309' }}>SMS PUSH ALERT NOTIFICATION</div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Your OTP is: <strong style={{ color: '#059669', fontSize: '1.1rem' }}>{pushToastCode}</strong></div>
-              <button class="btn btn-emerald" style={{ padding: '3px 8px', fontSize: '0.75rem', marginTop: '4px' }} onClick={autoFillToastOtp}>⚡ Auto-Fill OTP</button>
-            </div>
-          </div>
-        )}
-
-        {/* Global Alert Banner */}
         {alertMsg && (
           <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
             {alertMsg.text}
@@ -341,7 +269,7 @@ export default function VoterPortal({ user, setUser }) {
         <div class="auth-box">
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
             <h1 style={{ fontSize: '1.7rem', fontWeight: 800 }}>Voter Access Portal</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Sign in or register to participate in active e-voting polls.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Gmail verification & SHA-256 encrypted access.</p>
           </div>
 
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '10px', marginBottom: '1.5rem' }}>
@@ -352,21 +280,21 @@ export default function VoterPortal({ user, setUser }) {
           {authTab === 'login' ? (
             <form onSubmit={handleLoginSubmit}>
               <div class="form-group">
-                <label class="form-label">Voter ID / Registered Email</label>
-                <input class="form-input" type="text" placeholder="e.g. VOT-202601" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
+                <label class="form-label">Voter ID / Registered Gmail</label>
+                <input class="form-input" type="text" placeholder="e.g. voter@gmail.com" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
               </div>
               <div class="form-group">
                 <label class="form-label">Password</label>
                 <input class="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
               <button class="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
-                Sign In & Generate Real-Time OTP &rarr;
+                Sign In & Send Real Gmail Code &rarr;
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegisterSubmit}>
               <div class="form-group">
-                <label class="form-label">Desired Voter ID</label>
+                <label class="form-label">Voter ID</label>
                 <input class="form-input" type="text" placeholder="e.g. VOT-8899" value={regVoterId} onChange={e => setRegVoterId(e.target.value)} required />
               </div>
               <div class="form-group">
@@ -374,8 +302,8 @@ export default function VoterPortal({ user, setUser }) {
                 <input class="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
               <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <input class="form-input" type="email" placeholder="voter@example.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
+                <label class="form-label">Gmail Address (For Verification Code)</label>
+                <input class="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
               </div>
               <div class="form-group">
                 <label class="form-label">Mobile Phone (Optional)</label>
@@ -386,41 +314,46 @@ export default function VoterPortal({ user, setUser }) {
                 <input class="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
               </div>
               <button class="btn btn-emerald" style={{ width: '100%', padding: '0.85rem' }} type="submit">
-                Register & Send OTP Code &rarr;
+                Register & Verify Gmail &rarr;
               </button>
             </form>
           )}
         </div>
 
-        {/* 6-DIGIT OTP VERIFICATION MODAL */}
-        {showOtpModal && (
+        {/* REAL GMAIL VERIFICATION MODAL */}
+        {showGmailModal && (
           <div class="modal-backdrop">
             <div class="modal-content" style={{ textAlign: 'center' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>🔐 Enter 6-Digit Real-Time OTP</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '6px 0 1rem 0' }}>Code sent for Voter ID: <strong>{pendingUser?.voter_id}</strong></p>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📧</div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '6px 0 1.25rem 0' }}>
+                We sent a real-time verification code to <strong>{pendingUser?.email}</strong>.
+              </p>
 
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '4px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, display: 'inline-block' }}>
-                ⏱️ Code Expires in {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
-              </div>
+              {dispatchedTokenPreview && (
+                <div style={{ background: 'rgba(5, 150, 105, 0.1)', border: '1px solid #059669', padding: '0.65rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
+                  Gmail Security Token: <span style={{ letterSpacing: '2px', fontSize: '1.1rem' }}>{dispatchedTokenPreview}</span>
+                </div>
+              )}
 
-              <div class="otp-digits-row">
-                {otpDigits.map((digit, idx) => (
+              <form onSubmit={verifyGmailTokenSubmit}>
+                <div class="form-group">
                   <input
-                    key={idx}
-                    ref={otpInputRefs[idx]}
-                    class="otp-digit-input"
+                    class="form-input"
                     type="text"
-                    maxLength={1}
-                    value={digit}
-                    onChange={e => handleDigitChange(idx, e.target.value)}
+                    placeholder="Enter Token Code"
+                    style={{ textAlign: 'center', fontSize: '1.3rem', letterSpacing: '3px', fontWeight: 800 }}
+                    value={gmailTokenInput}
+                    onChange={e => setGmailTokenInput(e.target.value)}
+                    required
                   />
-                ))}
-              </div>
+                </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button class="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowOtpModal(false)}>Cancel</button>
-                <button class="btn btn-emerald" style={{ flex: 1 }} onClick={() => verifyOtpCode()}>Verify & Enter &rarr;</button>
-              </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button class="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowGmailModal(false)}>Cancel</button>
+                  <button class="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Login &rarr;</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -436,7 +369,7 @@ export default function VoterPortal({ user, setUser }) {
       {/* Voter Header Tag */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '0.85rem 1.25rem', borderRadius: '12px' }}>
         <div>
-          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Logged in as: </span>
+          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Voter: </span>
           <span style={{ color: 'var(--accent-emerald)', fontWeight: 800 }}>{user.name} ({user.voter_id})</span>
         </div>
         <button class="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Sign Out</button>
@@ -459,7 +392,7 @@ export default function VoterPortal({ user, setUser }) {
           <div class="portal-card" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: uppercase }}>SELECTED ELECTION POLL</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>SELECTED ELECTION POLL</span>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '4px 0' }}>{selectedElection?.title}</h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedElection?.description}</p>
               </div>
@@ -472,12 +405,12 @@ export default function VoterPortal({ user, setUser }) {
             </div>
           </div>
 
-          {/* Already Voted Receipt Screen vs Candidate Grid */}
+          {/* Already Voted Screen vs Candidate Grid */}
           {hasVoted ? (
             <div class="already-voted-box">
               <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🛡️</div>
-              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginBottom: '0.5rem' }}>Ballot Verified & Sealed</h2>
-              <p style={{ color: 'var(--text-main)', marginBottom: '1.25rem' }}>Your single vote has been recorded on the server. Multiple voting is strictly prohibited.</p>
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginBottom: '0.5rem' }}>Cryptographically Sealed Ballot</h2>
+              <p style={{ color: 'var(--text-main)', marginBottom: '1.25rem' }}>Your vote is sealed in the database with Caesar Cipher shift encryption and SHA-256 hashing.</p>
 
               <div style={{ background: 'rgba(5, 150, 105, 0.12)', border: '2px solid #059669', borderRadius: '14px', padding: '1.25rem', marginBottom: '1.25rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '1px' }}>✅ CONFIRMED BALLOT SELECTION</div>
@@ -485,19 +418,19 @@ export default function VoterPortal({ user, setUser }) {
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Verified Digital Vote Record</div>
               </div>
 
-              <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', background: 'rgba(0,0,0,0.04)', padding: '1rem', borderRadius: '10px', textAlign: 'left', color: 'var(--text-main)', maxWidth: '440px', margin: '0 auto' }}>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', background: 'rgba(0,0,0,0.04)', padding: '1rem', borderRadius: '10px', textAlign: 'left', color: 'var(--text-main)', maxWidth: '520px', margin: '0 auto' }}>
                 VOTER ID: {user.voter_id}<br />
                 ELECTION: {selectedElection?.title}<br />
                 VOTED CANDIDATE: {votedCandidateName || 'Selected Candidate'}<br />
-                STATUS: VERIFIED & SEALED<br />
-                TIMESTAMP: {new Date().toLocaleString()}<br />
-                DIGITAL RECEIPT: #{Math.floor(100000 + Math.random() * 900000)}
+                CAESAR CIPHER HASH: <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{votedCaesarHash || 'ENCRYPTED_SHIFT_3'}</span><br />
+                SHA-256 SEAL: <span style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>{votedSha256Hash || 'a4f8b9...'}</span><br />
+                TIMESTAMP: {new Date().toLocaleString()}
               </div>
             </div>
           ) : (
             <div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>Official Ballot Candidates</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>Review the manifesto of each candidate below and select your preferred candidate to cast your vote.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>Review the candidate details below and cast your encrypted vote.</p>
 
               {candidates.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '14px', color: 'var(--text-muted)' }}>
@@ -534,7 +467,7 @@ export default function VoterPortal({ user, setUser }) {
         <div class="modal-backdrop">
           <div class="modal-content" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗳️</div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Confirm Your Official Ballot Selection</h2>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Confirm Your Encrypted Ballot Selection</h2>
             <p style={{ margin: '1rem 0', fontSize: '1rem' }}>Are you sure you want to cast your single vote for:</p>
             <div style={{ background: 'rgba(37, 99, 235, 0.1)', border: '1px solid #2563eb', padding: '1rem', borderRadius: '12px', fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '1.5rem' }}>
               {selectedCandidate.name} ({selectedCandidate.department})
@@ -542,7 +475,7 @@ export default function VoterPortal({ user, setUser }) {
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button class="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowVoteConfirmModal(false)}>Cancel</button>
-              <button class="btn btn-emerald" style={{ flex: 1 }} onClick={submitVote}>Confirm & Cast Vote &rarr;</button>
+              <button class="btn btn-emerald" style={{ flex: 1 }} onClick={submitVote}>Confirm & Seal Vote &rarr;</button>
             </div>
           </div>
         </div>

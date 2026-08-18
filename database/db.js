@@ -1,7 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
+const { caesarCipherEncrypt, caesarCipherDecrypt, sha256Hash } = require('../utils/cipher');
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+
+// Initialize Supabase Client (if SUPABASE_URL and SUPABASE_KEY are provided in env)
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://sample-project.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'sample_anon_key';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 class Database {
   constructor() {
@@ -19,14 +26,14 @@ class Database {
             email: 'admin@votepulse.org',
             phone: '+1 555-0199',
             role: 'admin',
-            password_hash: 'admin123',
+            password_hash: sha256Hash('admin123'),
             created_at: new Date().toISOString()
           }
         ],
         elections: [],
         candidates: [],
         votes: [],
-        otps: []
+        gmail_tokens: []
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
     }
@@ -37,7 +44,7 @@ class Database {
       const raw = fs.readFileSync(DATA_FILE, 'utf8');
       return JSON.parse(raw);
     } catch (e) {
-      return { users: [], elections: [], candidates: [], votes: [], otps: [] };
+      return { users: [], elections: [], candidates: [], votes: [], gmail_tokens: [] };
     }
   }
 
@@ -45,10 +52,13 @@ class Database {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
   }
 
-  // Users & Auth
+  // User Auth & Hashing
   findUserByVoterId(voter_id) {
     const db = this.load();
-    return db.users.find(u => u.voter_id.toLowerCase() === voter_id.toLowerCase() || u.email.toLowerCase() === voter_id.toLowerCase());
+    return db.users.find(u => 
+      u.voter_id.toLowerCase() === voter_id.toLowerCase() || 
+      u.email.toLowerCase() === voter_id.toLowerCase()
+    );
   }
 
   createUser(userData) {
@@ -63,7 +73,7 @@ class Database {
       email: userData.email,
       phone: userData.phone || '',
       role: userData.role || 'voter',
-      password_hash: userData.password,
+      password_hash: sha256Hash(userData.password),
       created_at: new Date().toISOString()
     };
     db.users.push(newUser);
@@ -71,35 +81,42 @@ class Database {
     return newUser;
   }
 
-  // OTP Management
-  generateOTP(voter_id, email, phone) {
-    const db = this.load();
-    const otp_code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  verifyUserPassword(user, plainPassword) {
+    const hash = sha256Hash(plainPassword);
+    return user.password_hash === hash || user.password_hash === plainPassword;
+  }
 
-    const otpRecord = {
-      id: 'otp_' + Date.now(),
+  // Real Gmail Token Management
+  createGmailToken(voter_id, email) {
+    const db = this.load();
+    const token_code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const record = {
+      id: 'tok_' + Date.now(),
       voter_id,
       email,
-      phone,
-      otp_code,
+      token_code,
       expires_at,
       verified: false,
       created_at: new Date().toISOString()
     };
 
-    db.otps.push(otpRecord);
+    if (!db.gmail_tokens) db.gmail_tokens = [];
+    db.gmail_tokens.push(record);
     this.save(db);
-    return otpRecord;
+    return record;
   }
 
-  verifyOTP(voter_id, otp_code) {
+  verifyGmailToken(voter_id, token_code) {
     const db = this.load();
-    const record = db.otps.find(o => 
-      o.voter_id.toLowerCase() === voter_id.toLowerCase() && 
-      o.otp_code === otp_code &&
-      !o.verified &&
-      new Date(o.expires_at) > new Date()
+    if (!db.gmail_tokens) return false;
+
+    const record = db.gmail_tokens.find(t => 
+      t.voter_id.toLowerCase() === voter_id.toLowerCase() && 
+      t.token_code === token_code &&
+      !t.verified &&
+      new Date(t.expires_at) > new Date()
     );
 
     if (record) {
@@ -116,24 +133,13 @@ class Database {
     return db.elections;
   }
 
-  getElectionById(id) {
-    const db = this.load();
-    return db.elections.find(e => e.id === id);
-  }
-
   createElection(electionData) {
     const db = this.load();
-    if (db.elections.find(e => e.id === electionData.id)) {
-      throw new Error("Election ID already exists.");
-    }
-
     const newElection = {
       id: electionData.id || 'elec_' + Date.now(),
       title: electionData.title,
       category: electionData.category || 'General Poll',
       description: electionData.description || '',
-      start_date: electionData.start_date || new Date().toISOString(),
-      end_date: electionData.end_date || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
       status: electionData.status || 'active',
       created_at: new Date().toISOString()
     };
@@ -179,7 +185,7 @@ class Database {
     return newCandidate;
   }
 
-  // Votes & Voted Candidate Tracking
+  // Votes & Cryptographic Caesar Cipher Sealing
   hasVoted(election_id, voter_id) {
     const db = this.load();
     return db.votes.some(v => v.election_id === election_id && v.voter_id.toLowerCase() === voter_id.toLowerCase());
@@ -195,13 +201,15 @@ class Database {
       has_voted: true,
       candidate_id: vote.candidate_id,
       candidate_name: candidate ? candidate.name : (vote.candidate_name || 'Selected Candidate'),
-      candidate_party: candidate ? (candidate.party || candidate.department) : 'Official Ballot',
+      candidate_party: candidate ? (candidate.party || candidate.department) : 'Official Candidate',
       timestamp: vote.timestamp,
-      receipt_id: vote.id
+      receipt_id: vote.id,
+      caesar_hash: vote.caesar_hash,
+      sha256_hash: vote.sha256_hash
     };
   }
 
-  castVote(election_id, voter_id, candidate_id, ip_address = '127.0.0.1') {
+  castVote(election_id, voter_id, candidate_id) {
     const db = this.load();
     
     if (this.hasVoted(election_id, voter_id)) {
@@ -213,14 +221,21 @@ class Database {
       throw new Error("Invalid candidate selected for this election.");
     }
 
+    const rawReceiptString = `${voter_id}_${election_id}_${candidate_id}_${Date.now()}`;
+    
+    // Caesar Cipher Encryption & SHA-256 Sealing
+    const caesar_hash = caesarCipherEncrypt(rawReceiptString, 3);
+    const sha256_seal = sha256Hash(rawReceiptString);
+
     const voteRecord = {
       id: 'vt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       election_id,
       voter_id,
       candidate_id,
       candidate_name: candidate.name,
-      timestamp: new Date().toISOString(),
-      ip_address
+      caesar_hash,
+      sha256_hash: sha256_seal,
+      timestamp: new Date().toISOString()
     };
 
     db.votes.push(voteRecord);
@@ -230,12 +245,33 @@ class Database {
     return voteRecord;
   }
 
-  getVotes(election_id) {
+  // Public Cryptographic Audit Tool Query
+  auditBallotByHash(searchHash) {
     const db = this.load();
-    if (election_id) {
-      return db.votes.filter(v => v.election_id === election_id);
-    }
-    return db.votes;
+    const cleanHash = searchHash.trim();
+
+    const vote = db.votes.find(v => 
+      v.caesar_hash === cleanHash || 
+      v.sha256_hash === cleanHash || 
+      v.id === cleanHash
+    );
+
+    if (!vote) return null;
+
+    const election = db.elections.find(e => e.id === vote.election_id);
+    const decryptedString = caesarCipherDecrypt(vote.caesar_hash, 3);
+
+    return {
+      verified: true,
+      receipt_id: vote.id,
+      election_title: election ? election.title : vote.election_id,
+      voter_id_masked: vote.voter_id.substring(0, 3) + '***',
+      candidate_name: vote.candidate_name,
+      timestamp: vote.timestamp,
+      caesar_encrypted_hash: vote.caesar_hash,
+      sha256_seal: vote.sha256_hash,
+      decrypted_verification: decryptedString
+    };
   }
 
   getStats() {

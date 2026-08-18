@@ -30,24 +30,24 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
     <div class="main-container">
       {/* Hero Section */}
       <section class="hero">
-        <div class="hero-badge">🔒 End-to-End Encrypted & Authenticated Voting</div>
+        <div class="hero-badge">🔒 Real-Time Gmail Verification & Caesar-Cipher Encrypted Voting</div>
         <h1 class="hero-title">Online Voting & Election Management System</h1>
         <p class="hero-description">
-          A multi-portal e-Voting engine featuring real-time 6-digit OTP verification, strict server-side single-vote enforcement, live election analytics, and role-based administration.
+          An enterprise e-Voting engine featuring real-time Gmail token authentication, strict server-side single-vote enforcement, Caesar-Cipher & SHA-256 cryptographic sealing, and public ballot verification.
         </p>
       </section>
 
-      {/* Portal Gateway Cards */}
+      {/* Portal Gateway Cards (Admin Dashboard REMOVED from Central Hub) */}
       <section class="portal-grid">
         {/* Voter App Card */}
         <div class="portal-card">
           <div>
             <div class="card-icon">🗳️</div>
             <h2 class="card-title">Voter Portal</h2>
-            <p class="card-desc">For registered voters to cast secure, single-instance votes with real-time OTP authentication.</p>
+            <p class="card-desc">For registered voters to cast secure, single-instance votes with real-time Gmail email verification.</p>
             <ul class="feature-list">
-              <li>Secure Voter Login & Registration</li>
-              <li>Real-Time 6-Digit OTP Verification</li>
+              <li>Real Gmail Address Verification</li>
+              <li>Caesar Cipher & SHA-256 Sealed Receipts</li>
               <li>Interactive Digital Ballot & Candidate Profiles</li>
               <li>Strict Duplicate-Vote Protection ("Already Voted" Screen)</li>
             </ul>
@@ -57,35 +57,35 @@ export default function HubGateway({ navigateTo, onOpenSettings }) {
           </button>
         </div>
 
-        {/* Admin Dashboard Card */}
+        {/* Cryptographic Ballot Audit Tool Card (New Feature) */}
         <div class="portal-card">
           <div>
-            <div class="card-icon">⚡</div>
-            <h2 class="card-title">Admin Dashboard</h2>
-            <p class="card-desc">For election commissioners to manage polls, candidates, voters, and real-time tallying.</p>
+            <div class="card-icon">🔍</div>
+            <h2 class="card-title">Cryptographic Ballot Audit</h2>
+            <p class="card-desc">Independent public verification tool for voters to audit their encrypted ballot seal.</p>
             <ul class="feature-list">
-              <li>Election Creation & Status Control</li>
-              <li>Candidate & Voter Directory Management</li>
-              <li>Real-Time Vote Counting & Analytics</li>
-              <li>Exportable Election Result Reports</li>
+              <li>Verify Caesar Cipher Shift Hashes</li>
+              <li>Inspect SHA-256 Cryptographic Seals</li>
+              <li>Confirm Un-Altered Database Vote Records</li>
+              <li>Instant Public Transparency & Auditability</li>
             </ul>
           </div>
-          <button class="btn btn-primary" onClick={() => navigateTo('admin')}>
-            Open Admin Dashboard &rarr;
+          <button class="btn btn-primary" onClick={() => navigateTo('audit')}>
+            Audit Ballot Hash &rarr;
           </button>
         </div>
 
-        {/* System Settings & PWA Card */}
+        {/* System Settings Card */}
         <div class="portal-card">
           <div>
             <div class="card-icon">⚙️</div>
-            <h2 class="card-title">Preferences & Mobile App</h2>
-            <p class="card-desc">Customize system theme, text scaling, audio alerts, and install mobile app.</p>
+            <h2 class="card-title">Preferences & Display Settings</h2>
+            <p class="card-desc">Customize system theme, text scaling, and display preferences.</p>
             <ul class="feature-list">
               <li>Light Mode ☀️ & Dark Mode 🌙 System Switch</li>
-              <li>Audio Chimes & Push Notification Preferences</li>
               <li>Text Font Scale Settings (100% to 130%)</li>
-              <li>Installable Mobile App & Desktop PWA</li>
+              <li>Responsive Desktop & Mobile Display</li>
+              <li>Real-Time Session Management</li>
             </ul>
           </div>
           <button class="btn btn-secondary" onClick={onOpenSettings}>

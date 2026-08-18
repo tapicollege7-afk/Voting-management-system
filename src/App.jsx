@@ -3,10 +3,20 @@ import Navbar from './components/Navbar';
 import HubGateway from './components/HubGateway';
 import VoterPortal from './components/VoterPortal';
 import AdminConsole from './components/AdminConsole';
+import BallotAuditTool from './components/BallotAuditTool';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState('hub');
+  // Support route switching and standalone /admin route
+  const getInitialRoute = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/admin')) return 'admin';
+    if (path.startsWith('/voter')) return 'voter';
+    if (path.startsWith('/audit')) return 'audit';
+    return 'hub';
+  };
+
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
   const [theme, setTheme] = useState(localStorage.getItem('votepulse_theme') || 'light');
   const [fontScale, setFontScale] = useState(parseFloat(localStorage.getItem('votepulse_font_scale') || '1'));
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -53,6 +63,10 @@ export default function App() {
             adminUser={adminUser}
             setAdminUser={setAdminUser}
           />
+        )}
+
+        {currentRoute === 'audit' && (
+          <BallotAuditTool />
         )}
       </main>
 
