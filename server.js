@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Disable browser caching for static files so changes appear instantly
+// Disable browser caching for static files
 const noCacheOptions = {
   etag: false,
   lastModified: false,
@@ -37,14 +37,19 @@ app.use('/', express.static(path.join(__dirname, 'public'), noCacheOptions));
 // --- REST API ENDPOINTS ---
 
 // Health & System Info
-app.get('/api/health', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({
-    status: 'ok',
-    system: 'VotePulse Secure Online Voting Engine',
-    timestamp: new Date().toISOString(),
-    stats: db.getStats()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const stats = await db.getStats();
+    res.json({
+      status: 'ok',
+      system: 'VotePulse Secure Online Voting Engine',
+      timestamp: new Date().toISOString(),
+      stats
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Authentication: Register Voter
@@ -52,15 +57,15 @@ app.post('/api/auth/register', validateVoterRegistration, async (req, res) => {
   try {
     const { voter_id, name, email, phone, password } = req.body;
     
-    const existing = db.findUserByVoterId(voter_id);
+    const existing = await db.findUserByVoterId(voter_id);
     if (existing) {
       return res.status(400).json({ success: false, message: "Voter ID or Email is already registered." });
     }
 
-    const newUser = db.createUser({ voter_id, name, email, phone, password });
-    const gmailToken = db.createGmailToken(newUser.voter_id, newUser.email);
+    const newUser = await db.createUser({ voter_id, name, email, phone, password });
+    const gmailToken = await db.createGmailToken(newUser.voter_id, newUser.email);
 
-    // Send real verification token to voter's Gmail address
+    // Send real verification token via PHP / SMTP
     await sendGmailVerificationCode(newUser.email, newUser.voter_id, gmailToken.token_code);
 
     return res.status(201).json({
@@ -87,7 +92,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ success: false, message: "Voter ID and password are required." });
     }
 
-    const user = db.findUserByVoterId(voter_id);
+    const user = await db.findUserByVoterId(voter_id);
     if (!user) {
       return res.status(401).json({ success: false, message: "Invalid Voter ID or credentials." });
     }
@@ -96,7 +101,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: "Incorrect password." });
     }
 
-    const gmailToken = db.createGmailToken(user.voter_id, user.email);
+    const gmailToken = await db.createGmailToken(user.voter_id, user.email);
     await sendGmailVerificationCode(user.email, user.voter_id, gmailToken.token_code);
 
     return res.json({
@@ -117,14 +122,14 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Real Gmail Token Verification Endpoint
-app.post('/api/auth/verify-gmail-token', (req, res) => {
+app.post('/api/auth/verify-gmail-token', async (req, res) => {
   try {
     const { voter_id, token_code } = req.body;
     if (!voter_id || !token_code) {
       return res.status(400).json({ success: false, message: "Voter ID and verification token are required." });
     }
 
-    const isValid = db.verifyGmailToken(voter_id, token_code);
+    const isValid = await db.verifyGmailToken(voter_id, token_code);
     if (isValid) {
       return res.json({
         success: true,
@@ -142,10 +147,10 @@ app.post('/api/auth/verify-gmail-token', (req, res) => {
 });
 
 // Elections: Get Elections List
-app.get('/api/elections', (req, res) => {
+app.get('/api/elections', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
-    const elections = db.getElections();
+    const elections = await db.getElections();
     res.json({ success: true, elections });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -153,13 +158,13 @@ app.get('/api/elections', (req, res) => {
 });
 
 // Elections: Create Election (Admin)
-app.post('/api/elections', (req, res) => {
+app.post('/api/elections', async (req, res) => {
   try {
     const { title, description, category } = req.body;
     if (!title || !description) {
       return res.status(400).json({ success: false, message: "Election title and description are required." });
     }
-    const newElection = db.createElection({ title, description, category });
+    const newElection = await db.createElection({ title, description, category });
     res.status(201).json({ success: true, message: "Election created successfully.", election: newElection });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -167,10 +172,10 @@ app.post('/api/elections', (req, res) => {
 });
 
 // Elections: Update Status (Admin)
-app.patch('/api/elections/:id/status', (req, res) => {
+app.patch('/api/elections/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    const updated = db.updateElectionStatus(req.params.id, status);
+    const updated = await db.updateElectionStatus(req.params.id, status);
     if (!updated) {
       return res.status(404).json({ success: false, message: "Election not found." });
     }
@@ -181,11 +186,11 @@ app.patch('/api/elections/:id/status', (req, res) => {
 });
 
 // Candidates: Get Candidates
-app.get('/api/candidates', (req, res) => {
+app.get('/api/candidates', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { election_id } = req.query;
-    const candidates = db.getCandidates(election_id);
+    const candidates = await db.getCandidates(election_id);
     res.json({ success: true, candidates });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -193,13 +198,13 @@ app.get('/api/candidates', (req, res) => {
 });
 
 // Candidates: Add Candidate (Admin)
-app.post('/api/candidates', (req, res) => {
+app.post('/api/candidates', async (req, res) => {
   try {
     const { election_id, name, department, manifesto, photo_url } = req.body;
     if (!election_id || !name) {
       return res.status(400).json({ success: false, message: "Election ID and candidate name are required." });
     }
-    const newCandidate = db.createCandidate({ election_id, name, department, manifesto, photo_url });
+    const newCandidate = await db.createCandidate({ election_id, name, department, manifesto, photo_url });
     res.status(201).json({ success: true, message: "Candidate added successfully.", candidate: newCandidate });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -207,11 +212,11 @@ app.post('/api/candidates', (req, res) => {
 });
 
 // Voter Voting Status
-app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
+app.get('/api/voter/status/:voter_id/:election_id', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { voter_id, election_id } = req.params;
-    const voteDetails = db.getVoteDetails(election_id, voter_id.toUpperCase());
+    const voteDetails = await db.getVoteDetails(election_id, voter_id.toUpperCase());
     res.json({
       success: true,
       voter_id: voter_id.toUpperCase(),
@@ -232,12 +237,13 @@ app.get('/api/voter/status/:voter_id/:election_id', (req, res) => {
 });
 
 // Voting Engine: Cast Vote (STRICT SINGLE-VOTE + CAESAR CIPHER SEALING)
-app.post('/api/vote', validateVoteCast, (req, res) => {
+app.post('/api/vote', validateVoteCast, async (req, res) => {
   try {
     const { election_id, voter_id, candidate_id } = req.body;
     const cleanVoterId = voter_id.toUpperCase();
 
-    if (db.hasVoted(election_id, cleanVoterId)) {
+    const alreadyVoted = await db.hasVoted(election_id, cleanVoterId);
+    if (alreadyVoted) {
       return res.status(400).json({
         success: false,
         already_voted: true,
@@ -245,7 +251,7 @@ app.post('/api/vote', validateVoteCast, (req, res) => {
       });
     }
 
-    const voteRecord = db.castVote(election_id, cleanVoterId, candidate_id);
+    const voteRecord = await db.castVote(election_id, cleanVoterId, candidate_id);
 
     return res.status(201).json({
       success: true,
@@ -266,11 +272,11 @@ app.post('/api/vote', validateVoteCast, (req, res) => {
 });
 
 // Public Cryptographic Ballot Audit Query Endpoint
-app.get('/api/vote/audit/:hash', (req, res) => {
+app.get('/api/vote/audit/:hash', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { hash } = req.params;
-    const auditResult = db.auditBallotByHash(hash);
+    const auditResult = await db.auditBallotByHash(hash);
 
     if (auditResult) {
       res.json({ success: true, audit: auditResult });
@@ -283,20 +289,18 @@ app.get('/api/vote/audit/:hash', (req, res) => {
 });
 
 // Admin Metrics & Tally
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
-    const stats = db.getStats();
-    const elections = db.getElections();
-    const candidates = db.getCandidates();
-    const votes = db.getVotes();
+    const stats = await db.getStats();
+    const elections = await db.getElections();
+    const candidates = await db.getCandidates();
 
     res.json({
       success: true,
       stats,
       elections,
-      candidates,
-      recent_votes: votes.slice(-10).reverse()
+      candidates
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -304,16 +308,17 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // Admin Live Tally Breakdown
-app.get('/api/admin/results/:election_id', (req, res) => {
+app.get('/api/admin/results/:election_id', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { election_id } = req.params;
-    const election = db.getElections().find(e => e.id === election_id);
+    const elections = await db.getElections();
+    const election = elections.find(e => e.id === election_id);
     if (!election) {
       return res.status(404).json({ success: false, message: "Election not found." });
     }
 
-    const candidates = db.getCandidates(election_id);
+    const candidates = await db.getCandidates(election_id);
     const totalVotes = candidates.reduce((sum, c) => sum + (c.vote_count || 0), 0);
 
     const breakdown = candidates.map(c => {
@@ -356,7 +361,7 @@ app.get('*', (req, res, next) => {
 
 const server = app.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(`  VotePulse Secure E-Voting Server Running (Port ${PORT})`);
+  console.log(`  VotePulse SQLite E-Voting Server Running (Port ${PORT})`);
   console.log(`  Production Ready API & Static React SPA Active`);
   console.log(`===================================================`);
 }).on('error', (err) => {
@@ -365,7 +370,7 @@ const server = app.listen(PORT, () => {
     console.log(`\n⚠️ Port ${PORT} is currently busy. Switching to Port ${ALT_PORT}...`);
     app.listen(ALT_PORT, () => {
       console.log(`===================================================`);
-      console.log(`  VotePulse Secure E-Voting Server Running (Port ${ALT_PORT})`);
+      console.log(`  VotePulse SQLite E-Voting Server Running (Port ${ALT_PORT})`);
       console.log(`  Access online at: http://localhost:${ALT_PORT}`);
       console.log(`===================================================`);
     });
