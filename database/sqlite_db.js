@@ -163,6 +163,28 @@ class SQLiteDatabase {
     return record;
   }
 
+  async createMobileToken(voter_id, phone) {
+    const token_code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const record = {
+      id: 'tok_' + Date.now(),
+      voter_id,
+      email: phone || '',
+      token_code,
+      expires_at,
+      verified: 0,
+      created_at: new Date().toISOString()
+    };
+
+    await dbRun(
+      `INSERT INTO gmail_tokens (id, voter_id, email, token_code, expires_at, verified, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [record.id, record.voter_id, record.email, record.token_code, record.expires_at, 0, record.created_at]
+    );
+
+    return record;
+  }
+
   async verifyGmailToken(voter_id, token_code) {
     const cleanVoter = voter_id.toLowerCase().trim();
     const row = await dbGet(
@@ -176,6 +198,10 @@ class SQLiteDatabase {
       return true;
     }
     return false;
+  }
+
+  async verifyMobileToken(voter_id, token_code) {
+    return await this.verifyGmailToken(voter_id, token_code);
   }
 
   // Elections

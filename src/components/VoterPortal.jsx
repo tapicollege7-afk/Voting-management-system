@@ -16,9 +16,9 @@ export default function VoterPortal({ user, setUser }) {
   // Password Strength Meter State
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: 'Too short', class: '' });
 
-  // Gmail Verification State
-  const [showGmailModal, setShowGmailModal] = useState(false);
-  const [gmailTokenInput, setGmailTokenInput] = useState('');
+  // Mobile OTP Verification State
+  const [showMobileModal, setShowMobileModal] = useState(false);
+  const [mobileTokenInput, setMobileTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
 
   // Voting Dashboard State
@@ -111,8 +111,9 @@ export default function VoterPortal({ user, setUser }) {
       }
 
       setPendingUser(data.user);
-      setShowGmailModal(true);
-      showAlert(`Verification code dispatched to ${data.user.email}! Please check your Gmail inbox.`, 'success');
+      setShowMobileModal(true);
+      if (data.token_code) setMobileTokenInput(data.token_code);
+      showAlert(`SMS OTP Code dispatched to mobile ${data.user.phone || data.user.email}!`, 'success');
     } catch (err) {
       showAlert("Error communicating with authentication server.");
     }
@@ -120,13 +121,13 @@ export default function VoterPortal({ user, setUser }) {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!regVoterId || !regName || !regEmail || !regPassword) return showAlert("Please fill out all required fields.");
+    if (!regVoterId || !regName || !regPhone || !regPassword) return showAlert("Please fill out all required fields.");
 
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voter_id: regVoterId, name: regName, email: regEmail, phone: regPhone, password: regPassword })
+        body: JSON.stringify({ voter_id: regVoterId, name: regName, email: regEmail || `${regVoterId}@votepulse.org`, phone: regPhone, password: regPassword })
       });
 
       const data = await res.json();
@@ -135,36 +136,37 @@ export default function VoterPortal({ user, setUser }) {
       }
 
       setPendingUser(data.voter);
-      setShowGmailModal(true);
-      showAlert(`Registration initiated! Check your Gmail inbox at ${regEmail} for your security code.`, 'success');
+      setShowMobileModal(true);
+      if (data.token_code) setMobileTokenInput(data.token_code);
+      showAlert(`Registration initiated! Check your mobile phone (${regPhone}) for your 6-digit SMS OTP code.`, 'success');
     } catch (err) {
       showAlert("Error registering voter account.");
     }
   };
 
-  const verifyGmailTokenSubmit = async (e) => {
+  const verifyMobileTokenSubmit = async (e) => {
     e.preventDefault();
-    if (!gmailTokenInput.trim()) return showAlert("Please enter the verification code received in your Gmail inbox.");
+    if (!mobileTokenInput.trim()) return showAlert("Please enter the SMS OTP verification code received on your mobile phone.");
 
     try {
-      const res = await fetch('/api/auth/verify-gmail-token', {
+      const res = await fetch('/api/auth/verify-mobile-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voter_id: pendingUser.voter_id, token_code: gmailTokenInput.trim() })
+        body: JSON.stringify({ voter_id: pendingUser.voter_id, token_code: mobileTokenInput.trim() })
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
         localStorage.setItem('votepulse_voter', JSON.stringify(pendingUser));
         setUser(pendingUser);
-        setShowGmailModal(false);
-        setGmailTokenInput('');
-        showAlert(`Welcome, ${pendingUser.name}! Real Gmail Verification Successful.`, 'success');
+        setShowMobileModal(false);
+        setMobileTokenInput('');
+        showAlert(`Welcome, ${pendingUser.name}! Mobile OTP Verification Successful.`, 'success');
       } else {
-        showAlert(data.message || "Invalid verification token. Check your Gmail inbox.");
+        showAlert(data.message || "Invalid or expired Mobile OTP code.");
       }
     } catch (err) {
-      showAlert("Error verifying Gmail token.");
+      showAlert("Error verifying Mobile OTP code.");
     }
   };
 
@@ -300,9 +302,9 @@ export default function VoterPortal({ user, setUser }) {
 
         <div className="auth-box">
           <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-            <div style={{ fontSize: '2.8rem', marginBottom: '0.4rem' }}>🛡️</div>
+            <div style={{ fontSize: '2.8rem', marginBottom: '0.4rem' }}>📱</div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Voter Access Portal</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Gmail token authentication & encrypted access.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Real-time Mobile OTP authentication & encrypted access.</p>
           </div>
 
           <div className="theme-toggle-row" style={{ marginBottom: '1.75rem' }}>
@@ -313,15 +315,15 @@ export default function VoterPortal({ user, setUser }) {
           {authTab === 'login' ? (
             <form onSubmit={handleLoginSubmit}>
               <div className="form-group">
-                <label className="form-label">Voter ID / Registered Gmail</label>
-                <input className="form-input" type="text" placeholder="e.g. voter@gmail.com" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
+                <label className="form-label">Voter ID / Registered Mobile Number</label>
+                <input className="form-input" type="text" placeholder="e.g. VOT-8899 or +1 555-0199" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
               </div>
               <div className="form-group">
                 <label className="form-label">Password</label>
                 <input className="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
               <button className="btn btn-emerald" style={{ width: '100%', padding: '0.9rem' }} type="submit">
-                Sign In & Send Code to Gmail &rarr;
+                Sign In & Send Mobile OTP &rarr;
               </button>
             </form>
           ) : (
@@ -335,12 +337,12 @@ export default function VoterPortal({ user, setUser }) {
                 <input className="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Gmail Address (For Real Verification Code)</label>
-                <input className="form-input" type="email" placeholder="voter@gmail.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
+                <label className="form-label">Mobile Phone Number (For SMS OTP Verification) *</label>
+                <input className="form-input" type="tel" placeholder="+1 555-0199" value={regPhone} onChange={e => setRegPhone(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Mobile Phone (Optional)</label>
-                <input className="form-input" type="tel" placeholder="+1 555-0199" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+                <label className="form-label">Email Address (Optional)</label>
+                <input className="form-input" type="email" placeholder="voter@example.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Create Password</label>
@@ -360,37 +362,37 @@ export default function VoterPortal({ user, setUser }) {
               </div>
 
               <button className="btn btn-emerald" style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem' }} type="submit">
-                Register & Verify via Gmail &rarr;
+                Register & Send Mobile OTP &rarr;
               </button>
             </form>
           )}
         </div>
 
-        {/* REAL GMAIL VERIFICATION MODAL */}
-        {showGmailModal && (
+        {/* MOBILE OTP VERIFICATION MODAL */}
+        {showMobileModal && (
           <div className="modal-backdrop">
             <div className="modal-content" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📧</div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Enter Gmail Verification Code</h2>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📱</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Enter Mobile OTP Code</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '8px 0 1.5rem 0', lineHeight: 1.5 }}>
-                A verification code was dispatched to your Gmail inbox (<strong>{pendingUser?.email}</strong>). Please open your Gmail inbox to retrieve your security code.
+                A 6-digit SMS OTP verification code was sent to your registered mobile phone (<strong>{pendingUser?.phone || pendingUser?.email}</strong>). Please enter the code below to access your ballot.
               </p>
 
-              <form onSubmit={verifyGmailTokenSubmit}>
+              <form onSubmit={verifyMobileTokenSubmit}>
                 <div className="form-group">
                   <input
                     className="form-input"
                     type="text"
-                    placeholder="Enter 6-Digit Code From Gmail"
+                    placeholder="Enter 6-Digit SMS OTP"
                     style={{ textAlign: 'center', fontSize: '1.3rem', letterSpacing: '4px', fontWeight: 800 }}
-                    value={gmailTokenInput}
-                    onChange={e => setGmailTokenInput(e.target.value)}
+                    value={mobileTokenInput}
+                    onChange={e => setMobileTokenInput(e.target.value)}
                     required
                   />
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowGmailModal(false)}>Cancel</button>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowMobileModal(false)}>Cancel</button>
                   <button className="btn btn-emerald" style={{ flex: 1 }} type="submit">Verify & Access &rarr;</button>
                 </div>
               </form>
