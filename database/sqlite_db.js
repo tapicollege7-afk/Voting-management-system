@@ -332,6 +332,11 @@ class SQLiteDatabase {
     };
   }
 
+  // Get all voters (for Admin Dashboard)
+  async getAllVoters() {
+    return await dbAll(`SELECT id, voter_id, name, email, phone, role, created_at FROM users ORDER BY created_at DESC`);
+  }
+
   async getStats() {
     const voters = await dbGet(`SELECT COUNT(*) as cnt FROM users WHERE role = 'voter'`);
     const elections = await dbGet(`SELECT COUNT(*) as cnt FROM elections`);

@@ -1,40 +1,226 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import BallotAuditTool from './BallotAuditTool';
 
-export default function AdminConsole({ adminUser, setAdminUser }) {
+// ─── Mini Bar Chart ───────────────────────────────────────────────────────────
+function BarChart({ candidates, totalVotes }) {
+  if (!candidates || candidates.length === 0) return (
+    <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No candidate data.</p>
+  );
+  const max = Math.max(...candidates.map(c => c.vote_count || 0), 1);
+  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      {candidates.map((c, i) => {
+        const votes = c.vote_count || 0;
+        const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+        const barW = max > 0 ? Math.round((votes / max) * 100) : 0;
+        const color = colors[i % colors.length];
+        return (
+          <div key={c.id || i}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem', fontWeight: 700 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                {c.name}
+                {c.party || c.department ? <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>({c.party || c.department})</span> : null}
+              </span>
+              <span style={{ color, fontWeight: 800 }}>{votes} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>({pct}%)</span></span>
+            </div>
+            <div style={{ height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{
+                width: `${barW}%`, height: '100%', background: color,
+                borderRadius: '10px', transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+                boxShadow: `0 0 8px ${color}55`
+              }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ icon, label, value, color = 'var(--primary)', trend }) {
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+      borderRadius: '20px', padding: '1.5rem', display: 'flex', flexDirection: 'column',
+      gap: '0.5rem', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 30px rgba(0,0,0,0.25)`; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: color, borderRadius: '20px 20px 0 0' }} />
+      <div style={{ fontSize: '1.8rem' }}>{icon}</div>
+      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.2rem', fontWeight: 900, color }}>{value}</div>
+      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      {trend && <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700 }}>↑ {trend}</div>}
+    </div>
+  );
+}
+
+// ─── Alert Toast ──────────────────────────────────────────────────────────────
+function AlertToast({ msg }) {
+  if (!msg) return null;
+  const isSuccess = msg.type === 'success';
+  return (
+    <div style={{
+      position: 'fixed', top: '5rem', right: '1.5rem', zIndex: 9999,
+      background: isSuccess ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#dc2626,#ef4444)',
+      color: '#fff', borderRadius: '14px', padding: '0.85rem 1.5rem',
+      fontWeight: 700, fontSize: '0.88rem', maxWidth: '350px',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+      animation: 'floatUp 0.35s ease-out',
+      display: 'flex', alignItems: 'center', gap: '10px',
+    }}>
+      <span style={{ fontSize: '1.2rem' }}>{isSuccess ? '✅' : '❌'}</span>
+      {msg.text}
+    </div>
+  );
+}
+
+// ─── Admin Login Page ─────────────────────────────────────────────────────────
+function AdminLogin({ onLogin, alertMsg }) {
   const [adminId, setAdminId] = useState('');
   const [adminPass, setAdminPass] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
+  const [showPass, setShowPass] = useState(false);
 
-  // Stats & Data
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(adminId, adminPass);
+  };
+
+  return (
+    <div className="main-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+      <AlertToast msg={alertMsg} />
+      <div style={{ width: '100%', maxWidth: '460px' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '24px', margin: '0 auto 1rem',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '2.2rem', boxShadow: '0 12px 40px rgba(245,158,11,0.4)',
+          }}>⚡</div>
+          <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.4rem' }}>
+            Admin Console
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Authorized election administrators only
+          </p>
+        </div>
+
+        {/* Login Card */}
+        <div style={{
+          background: 'var(--bg-card)', backdropFilter: 'blur(20px)',
+          border: '1px solid var(--border-glass)', borderRadius: '28px',
+          padding: '2.5rem', boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+        }}>
+          {/* Security Notice */}
+          <div style={{
+            background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+            borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '1.75rem',
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>🔐</span>
+            <div style={{ fontSize: '0.78rem', color: '#f59e0b', lineHeight: 1.5 }}>
+              <strong>Secure Access</strong> — This portal is restricted to authorized administrators.
+              Default credentials: <strong>ADM-9999</strong> / <strong>admin123</strong>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">Administrator ID</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="ADM-9999"
+                value={adminId}
+                onChange={e => setAdminId(e.target.value)}
+                required
+                autoComplete="username"
+              />
+            </div>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label className="form-label">Password</label>
+              <input
+                className="form-input"
+                type={showPass ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                required
+                autoComplete="current-password"
+                style={{ paddingRight: '3rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                style={{
+                  position: 'absolute', right: '1rem', top: '2.35rem',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-muted)', fontSize: '1rem',
+                }}
+              >{showPass ? '🙈' : '👁️'}</button>
+            </div>
+            <button
+              className="btn"
+              type="submit"
+              style={{
+                width: '100%', padding: '0.9rem',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
+                fontSize: '1rem', borderRadius: '14px', fontWeight: 800,
+                transition: 'all 0.25s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(245,158,11,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,158,11,0.4)'; }}
+            >
+              🔑 Access Admin Dashboard
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Admin Console ───────────────────────────────────────────────────────
+export default function AdminConsole({ adminUser, setAdminUser }) {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [alertMsg, setAlertMsg] = useState(null);
+
+  // Data State
   const [stats, setStats] = useState({ total_voters: 0, active_elections: 0, total_candidates: 0, total_votes_cast: 0 });
   const [elections, setElections] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [voters, setVoters] = useState([]);
   const [selectedResultElectionId, setSelectedResultElectionId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Modals
+  // Modal State
   const [showCreateElectionModal, setShowCreateElectionModal] = useState(false);
   const [showCreateCandModal, setShowCreateCandModal] = useState(false);
-  const [showCreateVoterModal, setShowCreateVoterModal] = useState(false);
-  const [alertMsg, setAlertMsg] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
-  // Forms
+  // Election Form
   const [elecId, setElecId] = useState('');
   const [elecTitle, setElecTitle] = useState('');
   const [elecCategory, setElecCategory] = useState('General Poll');
   const [elecDesc, setElecDesc] = useState('');
 
+  // Candidate Form
   const [candElectionId, setCandElectionId] = useState('');
   const [candId, setCandId] = useState('');
   const [candName, setCandName] = useState('');
   const [candParty, setCandParty] = useState('');
   const [candManifesto, setCandManifesto] = useState('');
 
-  const [newVoterId, setNewVoterId] = useState('');
-  const [newVoterName, setNewVoterName] = useState('');
-  const [newVoterEmail, setNewVoterEmail] = useState('');
+  // Search
+  const [voterSearch, setVoterSearch] = useState('');
+  const [candSearch, setCandSearch] = useState('');
 
+  // ─── Effects ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const saved = localStorage.getItem('votepulse_admin');
     if (saved) {
@@ -43,24 +229,23 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   }, []);
 
   useEffect(() => {
-    if (adminUser) {
-      fetchAdminStats();
-    }
+    if (adminUser) fetchAdminStats();
   }, [adminUser]);
 
-  const showAlert = (msg, type = 'error') => {
-    setAlertMsg({ text: msg, type });
-    setTimeout(() => setAlertMsg(null), 5000);
+  // ─── Alerts ──────────────────────────────────────────────────────────────
+  const showAlert = (text, type = 'error') => {
+    setAlertMsg({ text, type });
+    setTimeout(() => setAlertMsg(null), 4500);
   };
 
-  const handleAdminLogin = (e) => {
-    e.preventDefault();
-    if (adminPass === 'admin123' || adminPass === 'voter123') {
-      const u = { id: adminId || 'ADM-9999', role: 'admin' };
+  // ─── Login / Logout ───────────────────────────────────────────────────────
+  const handleAdminLogin = (id, pass) => {
+    if (pass === 'admin123' || pass === 'voter123') {
+      const u = { id: id || 'ADM-9999', role: 'admin', loginTime: new Date().toISOString() };
       localStorage.setItem('votepulse_admin', JSON.stringify(u));
       setAdminUser(u);
     } else {
-      showAlert("Invalid Admin password. Default is admin123.");
+      showAlert('Invalid credentials. Use admin123 as the password.');
     }
   };
 
@@ -69,281 +254,416 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
     setAdminUser(null);
   };
 
-  const fetchAdminStats = async () => {
+  // ─── Data Fetching ────────────────────────────────────────────────────────
+  const fetchAdminStats = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await fetch('/api/admin/stats');
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          setStats(data.stats);
-          setElections(data.elections);
-          setCandidates(data.candidates);
+          setStats(data.stats || {});
+          setElections(data.elections || []);
+          setCandidates(data.candidates || []);
           setVoters(data.voters || []);
-          if (data.elections.length > 0 && !selectedResultElectionId) {
+          if ((data.elections || []).length > 0 && !selectedResultElectionId) {
             setSelectedResultElectionId(data.elections[0].id);
           }
+          setIsLoading(false);
           return;
         }
       }
     } catch (err) {}
 
-    // Fallback Local Storage Read
-    const localElecs = localStorage.getItem('votepulse_admin_elections');
-    const localCands = localStorage.getItem('votepulse_admin_candidates');
-    const localVoters = localStorage.getItem('votepulse_admin_voters');
-
-    const elecsArr = localElecs ? JSON.parse(localElecs) : [];
-    const candsArr = localCands ? JSON.parse(localCands) : [];
-    const votersArr = localVoters ? JSON.parse(localVoters) : [];
+    // Fallback to localStorage
+    const elecsArr = JSON.parse(localStorage.getItem('votepulse_admin_elections') || '[]');
+    const candsArr = JSON.parse(localStorage.getItem('votepulse_admin_candidates') || '[]');
+    const votersArr = JSON.parse(localStorage.getItem('votepulse_admin_voters') || '[]');
 
     setElections(elecsArr);
     setCandidates(candsArr);
     setVoters(votersArr);
-
-    const totalVotes = candsArr.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+    const totalVotes = candsArr.reduce((s, c) => s + (c.vote_count || 0), 0);
     setStats({
       total_voters: votersArr.length + 1,
       active_elections: elecsArr.filter(e => e.status === 'active').length,
       total_candidates: candsArr.length,
-      total_votes_cast: totalVotes
+      total_votes_cast: totalVotes,
     });
-
     if (elecsArr.length > 0 && !selectedResultElectionId) {
       setSelectedResultElectionId(elecsArr[0].id);
     }
+    setIsLoading(false);
+  }, [selectedResultElectionId]);
+
+  const saveLocal = (el, ca, vo) => {
+    localStorage.setItem('votepulse_admin_elections', JSON.stringify(el));
+    localStorage.setItem('votepulse_admin_candidates', JSON.stringify(ca));
+    localStorage.setItem('votepulse_admin_voters', JSON.stringify(vo));
   };
 
-  const saveLocalData = (elecsArr, candsArr, votersArr) => {
-    localStorage.setItem('votepulse_admin_elections', JSON.stringify(elecsArr));
-    localStorage.setItem('votepulse_admin_candidates', JSON.stringify(candsArr));
-    localStorage.setItem('votepulse_admin_voters', JSON.stringify(votersArr));
-  };
-
-  // Create Election
+  // ─── Create Election ──────────────────────────────────────────────────────
   const handleCreateElection = async (e) => {
     e.preventDefault();
-    const newElec = { id: elecId || 'ELEC-' + Date.now(), title: elecTitle, category: elecCategory, description: elecDesc, status: 'active' };
-
+    const newElec = {
+      id: elecId || 'ELEC-' + Date.now(),
+      title: elecTitle, category: elecCategory,
+      description: elecDesc, status: 'active',
+      created_at: new Date().toISOString(),
+    };
     try {
       await fetch('/api/elections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newElec)
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newElec),
       });
-    } catch (err) {}
-
+    } catch (_) {}
     const updated = [...elections, newElec];
     setElections(updated);
-    saveLocalData(updated, candidates, voters);
+    saveLocal(updated, candidates, voters);
     setShowCreateElectionModal(false);
     setElecId(''); setElecTitle(''); setElecDesc('');
-    showAlert("New election created & activated!", 'success');
+    showAlert('Election created & activated! 🎉', 'success');
     fetchAdminStats();
   };
 
-  // Toggle Election Status
+  // ─── Toggle Election Status ───────────────────────────────────────────────
   const toggleElectionStatus = async (id, newStatus) => {
     const updated = elections.map(e => e.id === id ? { ...e, status: newStatus } : e);
     setElections(updated);
+    saveLocal(updated, candidates, voters);
     try {
       await fetch(`/api/elections/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
-    } catch (err) {}
-    saveLocalData(updated, candidates, voters);
-    showAlert(`Election status changed to ${newStatus}`, 'success');
+    } catch (_) {}
+    showAlert(`Election ${newStatus === 'active' ? 'activated' : 'closed'}!`, 'success');
     fetchAdminStats();
   };
 
-  // Create Candidate
+  // ─── Delete Election ──────────────────────────────────────────────────────
+  const deleteElection = (id) => {
+    const updated = elections.filter(e => e.id !== id);
+    const updatedCands = candidates.filter(c => c.election_id !== id);
+    setElections(updated);
+    setCandidates(updatedCands);
+    saveLocal(updated, updatedCands, voters);
+    setShowDeleteConfirm(null);
+    showAlert('Election deleted.', 'success');
+    fetchAdminStats();
+  };
+
+  // ─── Create Candidate ─────────────────────────────────────────────────────
   const handleCreateCandidate = async (e) => {
     e.preventDefault();
-    const targetElecId = candElectionId || (elections.length > 0 ? elections[0].id : '');
+    const targetId = candElectionId || (elections.length > 0 ? elections[0].id : '');
     const newCand = {
       id: candId || 'CAND-' + Date.now(),
-      election_id: targetElecId,
-      name: candName,
-      department: candParty,
-      party: candParty,
+      election_id: targetId, name: candName,
+      department: candParty, party: candParty,
       manifesto: candManifesto,
-      photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300',
-      vote_count: 0
+      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(candName)}&background=6366f1&color=fff&size=300`,
+      vote_count: 0,
     };
-
     try {
       await fetch('/api/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCand)
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCand),
       });
-    } catch (err) {}
-
+    } catch (_) {}
     const updated = [...candidates, newCand];
     setCandidates(updated);
-    saveLocalData(elections, updated, voters);
+    saveLocal(elections, updated, voters);
     setShowCreateCandModal(false);
     setCandId(''); setCandName(''); setCandParty(''); setCandManifesto('');
-    showAlert("Candidate registered successfully!", 'success');
+    showAlert('Candidate registered! 👤', 'success');
     fetchAdminStats();
   };
 
+  // ─── Delete Candidate ─────────────────────────────────────────────────────
   const deleteCandidate = (id) => {
-    if (window.confirm("Remove candidate?")) {
-      const updated = candidates.filter(c => c.id !== id);
-      setCandidates(updated);
-      saveLocalData(elections, updated, voters);
-      showAlert("Candidate removed.", 'success');
-      fetchAdminStats();
-    }
-  };
-
-  // Create Voter
-  const handleCreateVoter = (e) => {
-    e.preventDefault();
-    const newVoter = { voter_id: newVoterId, name: newVoterName, email: newVoterEmail, created_at: new Date().toISOString() };
-    const updated = [...voters, newVoter];
-    setVoters(updated);
-    saveLocalData(elections, candidates, updated);
-    setShowCreateVoterModal(false);
-    setNewVoterId(''); setNewVoterName(''); setNewVoterEmail('');
-    showAlert("New voter registered!", 'success');
+    const updated = candidates.filter(c => c.id !== id);
+    setCandidates(updated);
+    saveLocal(elections, updated, voters);
+    showAlert('Candidate removed.', 'success');
     fetchAdminStats();
   };
 
-  // CSV Export
+  // ─── CSV Export ───────────────────────────────────────────────────────────
   const exportCSV = () => {
-    if (!selectedResultElectionId) return;
+    if (!selectedResultElectionId) return showAlert('Please select an election first.');
     const election = elections.find(e => e.id === selectedResultElectionId);
     const cands = candidates.filter(c => c.election_id === selectedResultElectionId);
-    const totalVotes = cands.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+    const totalVotes = cands.reduce((s, c) => s + (c.vote_count || 0), 0);
 
-    let csv = "data:text/csv;charset=utf-8,";
+    let csv = 'data:text/csv;charset=utf-8,';
     csv += `Election Title,${election ? election.title : 'Results'}\n`;
-    csv += `Total Ballots Counted,${totalVotes}\n\n`;
-    csv += "Candidate ID,Candidate Name,Party/Department,Vote Count,Percentage\n";
-
+    csv += `Total Ballots,${totalVotes}\nExport Date,${new Date().toLocaleDateString()}\n\n`;
+    csv += 'Candidate ID,Name,Party/Department,Votes,Percentage\n';
     cands.forEach(c => {
       const votes = c.vote_count || 0;
       const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
       csv += `${c.id},"${c.name}","${c.party || c.department}",${votes},${pct}%\n`;
     });
 
-    const uri = encodeURI(csv);
     const link = document.createElement('a');
-    link.href = uri;
-    link.download = `VotePulse_Election_Report_${selectedResultElectionId}.csv`;
+    link.href = encodeURI(csv);
+    link.download = `VotePulse_Report_${selectedResultElectionId}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showAlert("CSV Report downloaded successfully!", 'success');
+    showAlert('CSV Report downloaded! 📥', 'success');
   };
 
-  // Render Login Modal if not authenticated as Admin
+  // ─── Not Logged In ────────────────────────────────────────────────────────
   if (!adminUser) {
-    return (
-      <div className="main-container">
-        {alertMsg && (
-          <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
-            {alertMsg.text}
-          </div>
-        )}
-
-        <div className="auth-box">
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚡</div>
-            <h1 style={{ fontSize: '1.7rem', fontWeight: 800 }}>Admin Console Sign In</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Authorized Election Administrator Login.</p>
-          </div>
-
-          <form onSubmit={handleAdminLogin}>
-            <div className="form-group">
-              <label className="form-label">Administrator ID</label>
-              <input className="form-input" type="text" placeholder="ADM-9999" value={adminId} onChange={e => setAdminId(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input className="form-input" type="password" placeholder="••••••••" value={adminPass} onChange={e => setAdminPass(e.target.value)} required />
-            </div>
-            <button className="btn btn-primary" style={{ width: '100%', padding: '0.85rem' }} type="submit">
-              Access Admin Dashboard &rarr;
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+    return <AdminLogin onLogin={handleAdminLogin} alertMsg={alertMsg} />;
   }
 
-  // Active Admin Dashboard View
-  const selectedResultElection = elections.find(e => e.id === selectedResultElectionId);
-  const selectedResultCandidates = candidates.filter(c => c.election_id === selectedResultElectionId);
-  const totalResultVotes = selectedResultCandidates.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+  // ─── Computed values for Results tab ─────────────────────────────────────
+  const selectedElection = elections.find(e => e.id === selectedResultElectionId);
+  const selectedCandidates = candidates.filter(c => c.election_id === selectedResultElectionId);
+  const totalResultVotes = selectedCandidates.reduce((s, c) => s + (c.vote_count || 0), 0);
 
+  // Filtered data
+  const filteredVoters = voters.filter(v =>
+    !voterSearch ||
+    (v.name || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+    (v.voter_id || '').toLowerCase().includes(voterSearch.toLowerCase()) ||
+    (v.email || '').toLowerCase().includes(voterSearch.toLowerCase())
+  );
+  const filteredCandidates = candidates.filter(c =>
+    !candSearch ||
+    (c.name || '').toLowerCase().includes(candSearch.toLowerCase()) ||
+    (c.party || c.department || '').toLowerCase().includes(candSearch.toLowerCase())
+  );
+
+  // ─── Tab definitions ──────────────────────────────────────────────────────
+  const tabs = [
+    { id: 'overview', icon: '📊', label: 'Overview' },
+    { id: 'elections', icon: '🗳️', label: `Elections (${elections.length})` },
+    { id: 'candidates', icon: '👤', label: `Candidates (${candidates.length})` },
+    { id: 'voters', icon: '👥', label: `Voters (${voters.length})` },
+    { id: 'results', icon: '📈', label: 'Results' },
+    { id: 'audit', icon: '🔍', label: 'Ballot Audit' },
+  ];
+
+  // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
     <div className="main-container">
-      {/* Admin Header Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '0.85rem 1.25rem', borderRadius: '12px' }}>
-        <div>
-          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Admin Session: </span>
-          <span style={{ color: '#d97706', fontWeight: 800 }}>{adminUser.id}</span>
+      <AlertToast msg={alertMsg} />
+
+      {/* ── Admin Header Bar ─────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(217,119,6,0.08))',
+        border: '1px solid rgba(245,158,11,0.3)', borderRadius: '16px',
+        padding: '1rem 1.5rem', marginBottom: '1.75rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '12px',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.2rem', boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
+          }}>⚡</div>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Admin Session</div>
+            <div style={{ fontWeight: 800, color: '#f59e0b', fontSize: '1rem' }}>{adminUser.id}</div>
+          </div>
         </div>
-        <button className="btn btn-secondary" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={handleLogout}>Logout</button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={fetchAdminStats}
+            className="btn btn-secondary"
+            style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {isLoading ? '⏳' : '🔄'} Refresh
+          </button>
+          <button
+            onClick={handleLogout}
+            className="btn"
+            style={{
+              padding: '0.45rem 0.9rem', fontSize: '0.82rem',
+              background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+              border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px',
+            }}
+          >🚪 Logout</button>
+        </div>
       </div>
 
-      {alertMsg && (
-        <div style={{ padding: '1rem', borderRadius: '10px', marginBottom: '1rem', fontWeight: 600, background: alertMsg.type === 'error' ? '#fef2f2' : '#ecfdf5', color: alertMsg.type === 'error' ? '#dc2626' : '#047857', border: `1px solid ${alertMsg.type === 'error' ? '#fecaca' : '#a7f3d0'}` }}>
-          {alertMsg.text}
+      {/* ── KPI Stat Cards ───────────────────────────────────────────────── */}
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <StatCard icon="🗳️" label="Active Elections" value={stats.active_elections ?? 0} color="#6366f1" />
+        <StatCard icon="👤" label="Candidates" value={stats.total_candidates ?? 0} color="#10b981" />
+        <StatCard icon="👥" label="Registered Voters" value={stats.total_voters ?? 0} color="#06b6d4" />
+        <StatCard icon="🏆" label="Votes Cast" value={stats.total_votes_cast ?? 0} color="#f59e0b" />
+      </div>
+
+      {/* ── Tab Bar ──────────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', gap: '6px', flexWrap: 'wrap',
+        background: 'rgba(0,0,0,0.2)', padding: '5px',
+        borderRadius: '14px', marginBottom: '2rem',
+        border: '1px solid var(--border-glass)',
+      }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              flex: '1 1 auto', padding: '0.55rem 0.9rem', borderRadius: '10px',
+              border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+              transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+              background: activeTab === t.id
+                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                : 'transparent',
+              color: activeTab === t.id ? '#fff' : 'var(--text-muted)',
+              boxShadow: activeTab === t.id ? '0 4px 12px rgba(245,158,11,0.35)' : 'none',
+            }}
+          >{t.icon} {t.label}</button>
+        ))}
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 1 ─ OVERVIEW
+      ══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'overview' && (
+        <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
+          {/* Quick Summary */}
+          <div className="portal-card">
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📋 Election Summary
+              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', background: 'rgba(99,102,241,0.15)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '8px', fontWeight: 700 }}>
+                {elections.length} Total
+              </span>
+            </h2>
+            {elections.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🗳️</div>
+                <p>No elections yet. Go to Elections tab to create one.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {elections.map(e => (
+                  <div key={e.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '0.85rem 1rem', borderRadius: '12px',
+                    background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border-glass)',
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>{e.title}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{e.category} · {e.id}</div>
+                    </div>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 800,
+                      textTransform: 'uppercase', letterSpacing: '0.5px',
+                      background: e.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)',
+                      color: e.status === 'active' ? '#10b981' : '#64748b',
+                      border: `1px solid ${e.status === 'active' ? 'rgba(16,185,129,0.3)' : 'rgba(100,116,139,0.3)'}`,
+                    }}>{e.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Live Chart for first election */}
+          <div className="portal-card">
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📈 Live Vote Tally
+              {selectedElection && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: '4px' }}>
+                  — {selectedElection.title}
+                </span>
+              )}
+            </h2>
+            {elections.length > 0 && (
+              <select
+                className="form-input"
+                style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}
+                value={selectedResultElectionId}
+                onChange={e => setSelectedResultElectionId(e.target.value)}
+              >
+                {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+              </select>
+            )}
+            <BarChart candidates={selectedCandidates} totalVotes={totalResultVotes} />
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              <span>Total Ballots: <strong style={{ color: 'var(--primary)' }}>{totalResultVotes}</strong></span>
+              <span>Candidates: <strong>{selectedCandidates.length}</strong></span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Overview Metric Cards */}
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        <div className="stat-item">
-          <div className="stat-number">{stats.active_elections}</div>
-          <div className="stat-label">Active Elections</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.total_candidates}</div>
-          <div className="stat-label">Registered Candidates</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.total_voters}</div>
-          <div className="stat-label">Registered Voters</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number" style={{ color: '#d97706' }}>{stats.total_votes_cast}</div>
-          <div className="stat-label">Total Votes Cast</div>
-        </div>
-      </div>
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 2 ─ ELECTIONS
+      ══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'elections' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>🗳️ Elections Management</h2>
+            <button className="btn btn-primary" onClick={() => setShowCreateElectionModal(true)}>
+              + Create New Election
+            </button>
+          </div>
 
-      {/* Admin Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '12px', marginBottom: '2rem', flexWrap: 'wrap' }}>
-        <button className={`theme-option-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>📊 Overview</button>
-        <button className={`theme-option-btn ${activeTab === 'elections' ? 'active' : ''}`} onClick={() => setActiveTab('elections')}>🗳️ Elections ({elections.length})</button>
-        <button className={`theme-option-btn ${activeTab === 'candidates' ? 'active' : ''}`} onClick={() => setActiveTab('candidates')}>👤 Candidates ({candidates.length})</button>
-        <button className={`theme-option-btn ${activeTab === 'voters' ? 'active' : ''}`} onClick={() => setActiveTab('voters')}>👥 Voters Directory</button>
-        <button className={`theme-option-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>📈 Live Tally & Reports</button>
-        <button className={`theme-option-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => setActiveTab('audit')}>🔍 Internal Ballot Audit</button>
-      </div>
-
-      {/* TAB 1: OVERVIEW */}
-      {activeTab === 'overview' && (
-        <div className="portal-card">
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>Active Election Summary</h2>
           {elections.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No elections configured. Go to Elections tab to create a poll.</p>
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px dashed var(--border-glass)', borderRadius: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🗳️</div>
+              <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>No Elections Yet</h3>
+              <p>Click "Create New Election" to set up your first poll.</p>
+            </div>
           ) : (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {elections.map(e => (
-                <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid var(--card-border)', borderRadius: '10px', marginBottom: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{e.title}</h3>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{e.category} — ID: {e.id}</span>
+                <div key={e.id} style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+                  borderRadius: '18px', padding: '1.25rem 1.5rem',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  flexWrap: 'wrap', gap: '1rem',
+                  borderLeft: `4px solid ${e.status === 'active' ? '#10b981' : '#64748b'}`,
+                }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 800, fontSize: '1rem' }}>{e.title}</span>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase',
+                        background: e.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)',
+                        color: e.status === 'active' ? '#10b981' : '#64748b',
+                        border: `1px solid ${e.status === 'active' ? 'rgba(16,185,129,0.3)' : 'rgba(100,116,139,0.3)'}`,
+                      }}>{e.status}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)' }}>{e.id}</span>
+                      {' · '}{e.category}
+                      {e.description && <span> · {e.description.slice(0, 60)}{e.description.length > 60 ? '…' : ''}</span>}
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      Candidates: <strong>{candidates.filter(c => c.election_id === e.id).length}</strong>
+                      {' · '}Votes: <strong>{candidates.filter(c => c.election_id === e.id).reduce((s, c) => s + (c.vote_count || 0), 0)}</strong>
+                    </div>
                   </div>
-                  <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', background: e.status === 'active' ? '#ecfdf5' : '#f1f5f9', color: e.status === 'active' ? '#047857' : '#64748b' }}>
-                    {e.status}
-                  </span>
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    {e.status === 'active' ? (
+                      <button className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>
+                        ⏹ Close Poll
+                      </button>
+                    ) : (
+                      <button className="btn btn-emerald" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>
+                        ▶ Activate
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowDeleteConfirm(e)}
+                      style={{
+                        padding: '0.45rem 0.9rem', fontSize: '0.82rem', borderRadius: '10px',
+                        background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                        border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer', fontWeight: 700,
+                      }}
+                    >🗑 Delete</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -351,210 +671,311 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         </div>
       )}
 
-      {/* TAB 2: ELECTIONS */}
-      {activeTab === 'elections' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Elections Lifecycle</h2>
-            <button className="btn btn-primary" onClick={() => setShowCreateElectionModal(true)}>+ Create New Election</button>
-          </div>
-
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {elections.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No elections created yet.</td></tr>
-                ) : (
-                  elections.map(e => (
-                    <tr key={e.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{e.id}</td>
-                      <td><strong>{e.title}</strong></td>
-                      <td>{e.category}</td>
-                      <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', background: e.status === 'active' ? '#ecfdf5' : '#f1f5f9', color: e.status === 'active' ? '#047857' : '#64748b' }}>{e.status}</span></td>
-                      <td>
-                        {e.status === 'active' ? (
-                          <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>Close Poll</button>
-                        ) : (
-                          <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.78rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>Activate</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: CANDIDATES */}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 3 ─ CANDIDATES
+      ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'candidates' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Candidate Directory</h2>
-            <button className="btn btn-primary" onClick={() => setShowCreateCandModal(true)}>+ Register New Candidate</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>👤 Candidate Registry</h2>
+            <button className="btn btn-primary" onClick={() => setShowCreateCandModal(true)}>
+              + Register Candidate
+            </button>
           </div>
 
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Party / Department</th>
-                  <th>Election ID</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {candidates.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No candidates registered yet.</td></tr>
-                ) : (
-                  candidates.map(c => (
-                    <tr key={c.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{c.id}</td>
-                      <td><strong>{c.name}</strong></td>
-                      <td>{c.party || c.department}</td>
-                      <td>{c.election_id}</td>
-                      <td>
-                        <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.78rem', color: 'var(--danger)' }} onClick={() => deleteCandidate(c.id)}>Remove</button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Search */}
+          <input
+            className="form-input"
+            placeholder="🔍 Search candidates by name or party..."
+            value={candSearch}
+            onChange={e => setCandSearch(e.target.value)}
+            style={{ marginBottom: '1.25rem', fontSize: '0.9rem' }}
+          />
+
+          {filteredCandidates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px dashed var(--border-glass)', borderRadius: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
+              <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{candSearch ? 'No results found' : 'No Candidates Yet'}</h3>
+              <p>{candSearch ? 'Try a different search.' : 'Click "Register Candidate" to add candidates.'}</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+              {filteredCandidates.map(c => {
+                const elec = elections.find(e => e.id === c.election_id);
+                const totalForElec = candidates.filter(cc => cc.election_id === c.election_id).reduce((s, cc) => s + (cc.vote_count || 0), 0);
+                const pct = totalForElec > 0 ? Math.round(((c.vote_count || 0) / totalForElec) * 100) : 0;
+                return (
+                  <div key={c.id} style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+                    borderRadius: '20px', overflow: 'hidden', transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--border-glass-glow)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}>
+                    {/* Avatar */}
+                    <div style={{
+                      height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.15))',
+                      borderBottom: '1px solid var(--border-glass)',
+                    }}>
+                      <div style={{
+                        width: '60px', height: '60px', borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1, #10b981)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.5rem', fontWeight: 900, color: '#fff',
+                        border: '3px solid rgba(255,255,255,0.2)',
+                        boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+                      }}>
+                        {(c.name || '?')[0].toUpperCase()}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1.25rem' }}>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 800, marginBottom: '2px' }}>{c.name}</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700, marginBottom: '4px' }}>{c.party || c.department}</div>
+                      {c.manifesto && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                          "{c.manifesto.slice(0, 80)}{c.manifesto.length > 80 ? '…' : ''}"
+                        </div>
+                      )}
+
+                      {/* Vote bar */}
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, marginBottom: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Votes</span>
+                          <span style={{ color: '#10b981' }}>{c.vote_count || 0} ({pct}%)</span>
+                        </div>
+                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #10b981)', transition: 'width 0.8s ease', borderRadius: '6px' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {elec ? elec.title.slice(0, 22) + (elec.title.length > 22 ? '…' : '') : c.election_id}
+                        </span>
+                        <button
+                          onClick={() => { if (window.confirm(`Remove candidate "${c.name}"?`)) deleteCandidate(c.id); }}
+                          style={{
+                            background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)',
+                            borderRadius: '8px', padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
+                          }}
+                        >Remove</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* TAB 4: VOTERS DIRECTORY */}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 4 ─ VOTERS
+      ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'voters' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Registered Voters Directory</h2>
-            <button className="btn btn-primary" onClick={() => setShowCreateVoterModal(true)}>+ Register New Voter</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>👥 Voters Directory</h2>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
+              {voters.length + 1} registered
+            </span>
           </div>
+
+          <input
+            className="form-input"
+            placeholder="🔍 Search voters by ID, name, or email..."
+            value={voterSearch}
+            onChange={e => setVoterSearch(e.target.value)}
+            style={{ marginBottom: '1.25rem', fontSize: '0.9rem' }}
+          />
 
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Voter ID</th>
                   <th>Full Name</th>
                   <th>Email</th>
-                  <th>Registered On</th>
+                  <th>Phone</th>
+                  <th>Registered</th>
+                  <th>Role</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>ADM-9999</td>
+                {/* Admin Row */}
+                <tr style={{ background: 'rgba(245,158,11,0.06)' }}>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>0</td>
+                  <td><span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#f59e0b' }}>ADM-9999</span></td>
                   <td><strong>System Administrator</strong></td>
-                  <td>admin@votepulse.org</td>
-                  <td>2026-08-01</td>
+                  <td style={{ color: 'var(--text-muted)' }}>admin@votepulse.org</td>
+                  <td style={{ color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ color: 'var(--text-muted)' }}>2026-08-01</td>
+                  <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>ADMIN</span></td>
                 </tr>
-                {voters.map((v, i) => (
-                  <tr key={i}>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 700 }}>{v.voter_id}</td>
-                    <td><strong>{v.name}</strong></td>
-                    <td>{v.email}</td>
-                    <td>{new Date(v.created_at || Date.now()).toLocaleDateString()}</td>
-                  </tr>
-                ))}
+                {filteredVoters.length === 0 && !voterSearch ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No voters registered yet.</td></tr>
+                ) : filteredVoters.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No results for "{voterSearch}"</td></tr>
+                ) : (
+                  filteredVoters.map((v, i) => (
+                    <tr key={i}>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{i + 1}</td>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 800, color: 'var(--primary)' }}>{v.voter_id}</span></td>
+                      <td><strong>{v.name}</strong></td>
+                      <td style={{ color: 'var(--text-muted)' }}>{v.email}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{v.phone || '—'}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{v.created_at ? new Date(v.created_at).toLocaleDateString() : '—'}</td>
+                      <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(99,102,241,0.12)', color: 'var(--primary)', border: '1px solid rgba(99,102,241,0.25)' }}>VOTER</span></td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* TAB 5: LIVE TALLY & CSV REPORT */}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 5 ─ LIVE RESULTS
+      ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'results' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Live Tally & Analytical Reports</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Select an election poll to review candidate percentages and export CSV report.</p>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>📈 Live Tally & Reports</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>Real-time vote count per candidate with cryptographic receipt support.</p>
             </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <select className="form-input" style={{ width: 'auto' }} value={selectedResultElectionId} onChange={e => setSelectedResultElectionId(e.target.value)}>
-                {elections.map(e => (
-                  <option key={e.id} value={e.id}>{e.title}</option>
-                ))}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <select
+                className="form-input"
+                style={{ width: 'auto', minWidth: '180px', fontSize: '0.85rem' }}
+                value={selectedResultElectionId}
+                onChange={e => setSelectedResultElectionId(e.target.value)}
+              >
+                {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
               </select>
-
-              <button className="btn btn-emerald" onClick={exportCSV}>
-                📥 Export CSV Report
+              <button className="btn btn-emerald" onClick={exportCSV} style={{ whiteSpace: 'nowrap' }}>
+                📥 Export CSV
               </button>
             </div>
           </div>
 
-          {!selectedResultElection ? (
-            <div className="already-voted-box">No election poll selected.</div>
+          {!selectedElection ? (
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px dashed var(--border-glass)', borderRadius: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+              <p>No election selected. Create an election first.</p>
+            </div>
           ) : (
-            <div className="portal-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem' }}>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {/* Election Info Bar */}
+              <div style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+                borderRadius: '18px', padding: '1.25rem 1.5rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
+                borderLeft: `4px solid ${selectedElection.status === 'active' ? '#10b981' : '#64748b'}`,
+              }}>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{selectedResultElection.title}</h3>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{selectedResultElection.category}</span>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{selectedElection.title}</h3>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{selectedElection.category} · ID: {selectedElection.id}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)' }}>{totalResultVotes}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Ballots Counted</div>
+                <div style={{ display: 'flex', gap: '2rem', textAlign: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary)' }}>{totalResultVotes}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Ballots</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981' }}>{selectedCandidates.length}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Candidates</div>
+                  </div>
                 </div>
               </div>
 
-              {selectedResultCandidates.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)' }}>No candidates registered for this poll.</p>
-              ) : (
-                selectedResultCandidates.map(c => {
-                  const votes = c.vote_count || 0;
-                  const pct = totalResultVotes > 0 ? Math.round((votes / totalResultVotes) * 100) : 0;
-                  return (
-                    <div key={c.id} style={{ marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontWeight: 700 }}>
-                        <span>{c.name} ({c.party || c.department})</span>
-                        <span style={{ color: 'var(--accent-emerald)' }}>{votes} votes ({pct}%)</span>
-                      </div>
-                      <div style={{ height: '10px', background: 'rgba(0,0,0,0.06)', borderRadius: '5px', overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-emerald)', transition: 'width 0.5s ease' }}></div>
-                      </div>
-                    </div>
-                  );
-                })
+              {/* Chart */}
+              <div className="portal-card">
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem' }}>🏆 Vote Distribution</h3>
+                {selectedCandidates.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No candidates in this election. Register candidates first.
+                  </div>
+                ) : (
+                  <BarChart candidates={selectedCandidates} totalVotes={totalResultVotes} />
+                )}
+              </div>
+
+              {/* Leaderboard */}
+              {selectedCandidates.length > 0 && (
+                <div className="portal-card">
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.25rem' }}>🥇 Leaderboard</h3>
+                  <div className="table-container">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Candidate</th>
+                          <th>Party / Dept</th>
+                          <th>Votes</th>
+                          <th>Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...selectedCandidates]
+                          .sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0))
+                          .map((c, i) => {
+                            const votes = c.vote_count || 0;
+                            const pct = totalResultVotes > 0 ? Math.round((votes / totalResultVotes) * 100) : 0;
+                            const medals = ['🥇', '🥈', '🥉'];
+                            return (
+                              <tr key={c.id} style={{ background: i === 0 ? 'rgba(245,158,11,0.05)' : 'transparent' }}>
+                                <td style={{ fontSize: '1.2rem' }}>{medals[i] || (i + 1)}</td>
+                                <td><strong>{c.name}</strong></td>
+                                <td style={{ color: 'var(--text-muted)' }}>{c.party || c.department}</td>
+                                <td><strong style={{ color: 'var(--primary)' }}>{votes}</strong></td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '6px', overflow: 'hidden', minWidth: '60px' }}>
+                                      <div style={{ width: `${pct}%`, height: '100%', background: i === 0 ? '#f59e0b' : 'var(--primary)', borderRadius: '6px' }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: i === 0 ? '#f59e0b' : 'var(--primary)', minWidth: '32px' }}>{pct}%</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 6: INTERNAL BALLOT AUDIT (Admin Internal Use Only) */}
-      {activeTab === 'audit' && (
-        <BallotAuditTool />
-      )}
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 6 ─ BALLOT AUDIT
+      ══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'audit' && <BallotAuditTool />}
 
-      {/* CREATE ELECTION MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════
+          MODAL: CREATE ELECTION
+      ══════════════════════════════════════════════════════════════════ */}
       {showCreateElectionModal && (
-        <div className="modal-backdrop">
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowCreateElectionModal(false); }}>
           <div className="modal-content">
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Create New Election</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>🗳️ Create New Election</h2>
+              <button onClick={() => setShowCreateElectionModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
             <form onSubmit={handleCreateElection}>
               <div className="form-group">
-                <label className="form-label">Election ID</label>
+                <label className="form-label">Election ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(auto-generated if empty)</span></label>
                 <input className="form-input" type="text" placeholder="ELEC-2026-01" value={elecId} onChange={e => setElecId(e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Election Title</label>
-                <input className="form-input" type="text" placeholder="General Election 2026" value={elecTitle} onChange={e => setElecTitle(e.target.value)} required />
+                <label className="form-label">Election Title *</label>
+                <input className="form-input" type="text" placeholder="Student Council Election 2026" value={elecTitle} onChange={e => setElecTitle(e.target.value)} required />
               </div>
               <div className="form-group">
                 <label className="form-label">Category</label>
@@ -562,81 +983,95 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                   <option value="General Poll">General Poll</option>
                   <option value="Departmental Poll">Departmental Poll</option>
                   <option value="Executive Council">Executive Council</option>
+                  <option value="Faculty Election">Faculty Election</option>
+                  <option value="Club/Society Election">Club / Society Election</option>
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Description</label>
-                <textarea className="form-input" rows={3} placeholder="Election details..." value={elecDesc} onChange={e => setElecDesc(e.target.value)} />
+                <textarea className="form-input" rows={3} placeholder="Brief election description..." value={elecDesc} onChange={e => setElecDesc(e.target.value)} />
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
                 <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateElectionModal(false)}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Create & Activate &rarr;</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} type="submit">Create & Activate →</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* CREATE CANDIDATE MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════
+          MODAL: REGISTER CANDIDATE
+      ══════════════════════════════════════════════════════════════════ */}
       {showCreateCandModal && (
-        <div className="modal-backdrop">
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowCreateCandModal(false); }}>
           <div className="modal-content">
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Register New Candidate</h2>
-            <form onSubmit={handleCreateCandidate}>
-              <div className="form-group">
-                <label className="form-label">Target Election Poll</label>
-                <select className="form-input" value={candElectionId} onChange={e => setCandElectionId(e.target.value)}>
-                  {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-                </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>👤 Register Candidate</h2>
+              <button onClick={() => setShowCreateCandModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            {elections.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <p>Create an election first before registering candidates.</p>
+                <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => { setShowCreateCandModal(false); setShowCreateElectionModal(true); }}>Create Election</button>
               </div>
-              <div className="form-group">
-                <label className="form-label">Candidate ID</label>
-                <input className="form-input" type="text" placeholder="CAND-101" value={candId} onChange={e => setCandId(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" type="text" placeholder="Candidate Name" value={candName} onChange={e => setCandName(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Party / Department</label>
-                <input className="form-input" type="text" placeholder="Progress Party / Computer Science" value={candParty} onChange={e => setCandParty(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Manifesto Statement</label>
-                <textarea className="form-input" rows={2} placeholder="Empowering innovation..." value={candManifesto} onChange={e => setCandManifesto(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateCandModal(false)}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Register Candidate &rarr;</button>
-              </div>
-            </form>
+            ) : (
+              <form onSubmit={handleCreateCandidate}>
+                <div className="form-group">
+                  <label className="form-label">Target Election *</label>
+                  <select className="form-input" value={candElectionId} onChange={e => setCandElectionId(e.target.value)} required>
+                    <option value="">Select Election…</option>
+                    {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Candidate ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+                  <input className="form-input" type="text" placeholder="CAND-101" value={candId} onChange={e => setCandId(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Full Name *</label>
+                  <input className="form-input" type="text" placeholder="Rahul Sharma" value={candName} onChange={e => setCandName(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Party / Department</label>
+                  <input className="form-input" type="text" placeholder="Computer Science Dept." value={candParty} onChange={e => setCandParty(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Manifesto</label>
+                  <textarea className="form-input" rows={2} placeholder="Candidate's vision and promises..." value={candManifesto} onChange={e => setCandManifesto(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateCandModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" style={{ flex: 2 }} type="submit">Register Candidate →</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
 
-      {/* CREATE VOTER MODAL */}
-      {showCreateVoterModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content">
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>+ Register New Voter</h2>
-            <form onSubmit={handleCreateVoter}>
-              <div className="form-group">
-                <label className="form-label">Voter ID</label>
-                <input className="form-input" type="text" placeholder="VOT-9900" value={newVoterId} onChange={e => setNewVoterId(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" type="text" placeholder="Voter Name" value={newVoterName} onChange={e => setNewVoterName(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input className="form-input" type="email" placeholder="voter@example.com" value={newVoterEmail} onChange={e => setNewVoterEmail(e.target.value)} required />
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateVoterModal(false)}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex: 1 }} type="submit">Save Voter &rarr;</button>
-              </div>
-            </form>
+      {/* ══════════════════════════════════════════════════════════════════
+          MODAL: DELETE ELECTION CONFIRM
+      ══════════════════════════════════════════════════════════════════ */}
+      {showDeleteConfirm && (
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowDeleteConfirm(null); }}>
+          <div className="modal-content" style={{ maxWidth: '420px' }}>
+            <div style={{ textAlign: 'center', padding: '1rem 0 1.5rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Delete Election?</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                This will permanently delete <strong>"{showDeleteConfirm.title}"</strong> and all its candidates.
+                This action cannot be undone.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', boxShadow: '0 4px 12px rgba(239,68,68,0.4)' }}
+                onClick={() => deleteElection(showDeleteConfirm.id)}
+              >🗑 Delete Forever</button>
+            </div>
           </div>
         </div>
       )}

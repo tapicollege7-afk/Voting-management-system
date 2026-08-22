@@ -311,19 +311,21 @@ app.get('/api/vote/audit/:hash', async (req, res) => {
   }
 });
 
-// Admin Metrics & Tally
+// Admin Metrics & Tally (includes real voter list)
 app.get('/api/admin/stats', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const stats = await db.getStats();
     const elections = await db.getElections();
     const candidates = await db.getCandidates();
+    const voters = await db.getAllVoters();
 
     res.json({
       success: true,
       stats,
       elections,
-      candidates
+      candidates,
+      voters
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
