@@ -1,225 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VotePulse - Secure Online Voting Platform</title>
 
   <!-- PWA Metadata -->
-  <link rel="manifest" href="./manifest.json?v=5.0">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="description" content="Secure, authenticated, real-time e-Voting and Election Management platform with duplicate vote protection and PWA support.">
+  <link rel="manifest" href="./assets/manifest-DPGl8C2C-DPGl8C2C-DPGl8C2C-DPGl8C2C-DPGl8C2C-DPGl8C2C.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="description" content="Secure, authenticated, real-time e-Voting and Election Management platform with duplicate vote protection and React PWA support.">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="./css/hub.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-DaC9zatA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-L1HXOjYb.css">
 </head>
 <body>
-
-  <!-- Header - Clean & Minimalist -->
-  <header class="app-header">
-    <div class="header-container">
-      <a href="../index.html" class="brand">
-        <div class="brand-icon">🗳️</div>
-        <div>
-          <div class="brand-title">VotePulse</div>
-          <div class="brand-subtitle">Secure Online Voting Platform</div>
-        </div>
-      </a>
-      <div class="header-nav">
-        <!-- Settings Gear Button -->
-        <button class="icon-btn" onclick="openSettingsModal()" title="System Settings">⚙️</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="main-content">
-
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-badge">🔒 End-to-End Encrypted & Authenticated Voting</div>
-      <h1 class="hero-title">Online Voting & Election Management System</h1>
-      <p class="hero-description">
-        A multi-portal e-Voting engine featuring real-time 6-digit OTP verification, strict server-side single-vote enforcement, live election analytics, and role-based administration.
-      </p>
-    </section>
-
-    <!-- Portal Gateway Cards -->
-    <section class="portal-grid">
-
-      <!-- Voter Module Portal -->
-      <div class="portal-card voter">
-        <div>
-          <div class="card-icon">🗳️</div>
-          <h2 class="card-title">Voter Portal</h2>
-          <p class="card-desc">For registered voters to cast secure, single-instance votes with real-time OTP authentication.</p>
-          <ul class="feature-list">
-            <li>Secure Voter Login & Registration</li>
-            <li>Real-Time 6-Digit OTP Verification</li>
-            <li>Interactive Digital Ballot & Candidate Profiles</li>
-            <li>Strict Duplicate-Vote Protection ("Already Voted" Screen)</li>
-          </ul>
-        </div>
-        <a href="./voter/index.html" class="btn-card btn-voter">Open Voter App &rarr;</a>
-      </div>
-
-      <!-- Admin Module Portal -->
-      <div class="portal-card admin">
-        <div>
-          <div class="card-icon">⚡</div>
-          <h2 class="card-title">Admin Dashboard</h2>
-          <p class="card-desc">For election commissioners to manage polls, candidates, voters, and real-time tallying.</p>
-          <ul class="feature-list">
-            <li>Election Creation & Status Control</li>
-            <li>Candidate & Voter Directory Management</li>
-            <li>Real-Time Vote Counting & Analytics</li>
-            <li>Exportable Election Result Reports</li>
-          </ul>
-        </div>
-        <a href="./admin/index.html" class="btn-card btn-admin">Open Admin Dashboard &rarr;</a>
-      </div>
-
-      <!-- System Specifications & Mobile App Download -->
-      <div class="portal-card analytics">
-        <div>
-          <div class="card-icon">⚙️</div>
-          <h2 class="card-title">Preferences & Mobile App</h2>
-          <p class="card-desc">Customize system theme, text scaling, audio alerts, and install mobile app.</p>
-          <ul class="feature-list">
-            <li>Light Mode ☀️ & Dark Mode 🌙 System Switch</li>
-            <li>Audio Chimes & Push Notification Preferences</li>
-            <li>Text Font Scale Settings (100% to 130%)</li>
-            <li>Installable Mobile App & Desktop PWA</li>
-          </ul>
-        </div>
-        <button class="btn-card btn-secondary" onclick="openSettingsModal()">⚙️ Open Settings Menu</button>
-      </div>
-
-    </section>
-
-    <!-- Live System Metrics Section -->
-    <section class="stats-section" id="statsSection">
-      <div class="stats-header">
-        <h2 class="stats-title">Live System Metrics & Performance</h2>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-number" id="statVoters">0</div>
-          <div class="stat-label">Registered Voters</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number" id="statElections">0</div>
-          <div class="stat-label">Active Elections</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number" id="statCandidates">0</div>
-          <div class="stat-label">Verified Candidates</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number" id="statVotes">0</div>
-          <div class="stat-label">Total Votes Cast</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ADVANCED SYSTEM SETTINGS MODAL -->
-  <div class="modal-backdrop" id="settingsModal">
-    <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-        <h2 style="font-size:1.3rem; font-weight:800;">⚙️ System Settings</h2>
-        <button class="icon-btn" onclick="closeSettingsModal()" style="border:none;">✕</button>
-      </div>
-
-      <!-- Section 1: Appearance & Theme -->
-      <div class="setting-section">
-        <div class="setting-section-title">🎨 Appearance & Display</div>
-        <div class="theme-toggle-row">
-          <button class="theme-option-btn" id="themeBtnLight" onclick="setTheme('light')">☀️ Light Mode</button>
-          <button class="theme-option-btn" id="themeBtnDark" onclick="setTheme('dark')">🌙 Dark Mode</button>
-        </div>
-      </div>
-
-      <!-- Section 2: Font Scaling -->
-      <div class="setting-section">
-        <div class="setting-section-title">🔍 Text Font Scaling</div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn-card btn-secondary" style="flex:1; padding:0.6rem; font-size:0.85rem;" onclick="setFontScale(1)">100% (Standard)</button>
-          <button class="btn-card btn-secondary" style="flex:1; padding:0.6rem; font-size:0.85rem;" onclick="setFontScale(1.15)">115% (Large)</button>
-          <button class="btn-card btn-secondary" style="flex:1; padding:0.6rem; font-size:0.85rem;" onclick="setFontScale(1.3)">130% (XL)</button>
-        </div>
-      </div>
-
-      <!-- Section 3: Audio & Notifications -->
-      <div class="setting-section">
-        <div class="setting-section-title">🔔 Audio & Notifications</div>
-        <div class="setting-row">
-          <span class="setting-label">Sound Chime Effects</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="soundToggle" checked onchange="toggleSoundPref(this.checked)">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="setting-row">
-          <span class="setting-label">Real-Time Push Alerts</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="pushToggle" checked onchange="togglePushPref(this.checked)">
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Section 4: Mobile App Download & Offline PWA -->
-      <div class="setting-section" style="border-bottom:none;">
-        <div class="setting-section-title">📱 Mobile App (PWA)</div>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.85rem;">Install VotePulse onto your phone or desktop home screen.</p>
-        <button class="btn-card btn-voter" style="margin-bottom:0.6rem;" onclick="triggerPwaInstall()">📱 Install App on Device</button>
-        <button class="btn-card btn-secondary" onclick="openAppDownloadGuide()">📖 How to Install Guide</button>
-      </div>
-
-      <!-- Reset Cache Button -->
-      <div style="text-align:center; margin-top:1rem;">
-        <button class="btn-secondary" style="padding:0.5rem 1rem; font-size:0.82rem; border:none; color:var(--danger);" onclick="clearSystemCache()">🗑️ Clear Saved Local Preferences</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- APP INSTALLATION GUIDE MODAL -->
-  <div class="modal-backdrop" id="guideModal">
-    <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h2 style="font-size:1.2rem; font-weight:800;">📱 Mobile App Download Guide</h2>
-        <button class="icon-btn" onclick="closeGuideModal()" style="border:none;">✕</button>
-      </div>
-      
-      <div style="font-size:0.9rem; line-height:1.6; color:var(--text-main);">
-        <h4 style="color:var(--primary); margin-bottom:4px;">🤖 Android Installation (Chrome/Edge):</h4>
-        <ol style="margin-left:1.2rem; margin-bottom:1rem;">
-          <li>Tap the <strong>Menu ⋮</strong> in Chrome.</li>
-          <li>Select <strong>"Install App"</strong> or <strong>"Add to Home screen"</strong>.</li>
-        </ol>
-
-        <h4 style="color:var(--primary); margin-bottom:4px;">🍎 iOS Installation (Safari):</h4>
-        <ol style="margin-left:1.2rem; margin-bottom:1.5rem;">
-          <li>Tap the <strong>Share button ⎋</strong> in Safari.</li>
-          <li>Scroll down and tap <strong>"Add to Home Screen"</strong>.</li>
-        </ol>
-      </div>
-
-      <button class="btn-card btn-voter" onclick="closeGuideModal()">Got It!</button>
-    </div>
-  </div>
-
-  <!-- Footer -->
-  <footer class="app-footer">
-    <p>&copy; 2026 VotePulse System Engine. Built with HTML5, CSS3, JavaScript, Node.js REST API, SQLite, and PWA Service Workers.</p>
-  </footer>
-
-  <script src="./js/hub.js?v=5.0"></script>
+  <div id="root"></div>
 </body>
 </html>

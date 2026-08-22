@@ -1,6 +1,6 @@
 {
-  "short_name": "VotePulse Admin",
-  "name": "VotePulse - Admin Dashboard PWA",
+  "short_name": "VotePulse",
+  "name": "VotePulse - Online Voting System Engine",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/927/927295.png",
@@ -21,5 +21,5 @@
   "orientation": "portrait",
   "theme_color": "#2563eb",
   "background_color": "#f8fafc",
-  "description": "Election management administration console and live vote analytics."
+  "description": "Secure e-Voting Engine with real-time OTP authentication and duplicate vote protection."
 }
