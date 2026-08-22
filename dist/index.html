@@ -33,11 +33,12 @@
 <body>
   <div id="root"></div>
 
-  <!-- PWA Service Worker Registration -->
+  <!-- PWA Service Worker Registration (GitHub Pages compatible) -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        // Relative path works on both localhost AND GitHub Pages subdirectory
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then(function (reg) {
             console.log('✅ [PWA] Service Worker registered! Scope:', reg.scope);
           })
