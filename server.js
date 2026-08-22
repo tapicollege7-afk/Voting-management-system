@@ -10,7 +10,7 @@ const {
 } = require('./middleware/validation');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const INITIAL_PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Middleware
 app.use(cors());
@@ -359,22 +359,21 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`===================================================`);
-  console.log(`  VotePulse SQLite E-Voting Server Running (Port ${PORT})`);
-  console.log(`  Production Ready API & Static React SPA Active`);
-  console.log(`===================================================`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    const ALT_PORT = 3001;
-    console.log(`\n⚠️ Port ${PORT} is currently busy. Switching to Port ${ALT_PORT}...`);
-    app.listen(ALT_PORT, () => {
-      console.log(`===================================================`);
-      console.log(`  VotePulse SQLite E-Voting Server Running (Port ${ALT_PORT})`);
-      console.log(`  Access online at: http://localhost:${ALT_PORT}`);
-      console.log(`===================================================`);
-    });
-  } else {
-    console.error("Server error:", err);
-  }
-});
+// Dynamic Port Selector (Automatically finds next free port if 3000/3001 are occupied)
+function startServer(portToUse) {
+  const server = app.listen(portToUse, () => {
+    console.log(`===================================================`);
+    console.log(`  VotePulse SQLite E-Voting Server Running (Port ${portToUse})`);
+    console.log(`  Access online at: http://localhost:${portToUse}`);
+    console.log(`===================================================`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Port ${portToUse} is occupied. Trying Port ${portToUse + 1}...`);
+      startServer(portToUse + 1);
+    } else {
+      console.error("Server startup error:", err);
+    }
+  });
+}
+
+startServer(INITIAL_PORT);
