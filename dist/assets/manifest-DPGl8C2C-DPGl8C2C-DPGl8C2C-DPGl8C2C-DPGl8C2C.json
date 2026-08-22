@@ -1,6 +1,6 @@
 {
   "short_name": "VotePulse",
-  "name": "VotePulse - Secure Online Voting Engine",
+  "name": "VotePulse - Online Voting System Engine",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/927/927295.png",
@@ -19,7 +19,7 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#6366f1",
-  "background_color": "#090d16",
-  "description": "Secure e-Voting Engine with real-time Gmail token authentication, Caesar-Cipher encrypted vote receipts, and PWA offline capability."
+  "theme_color": "#2563eb",
+  "background_color": "#f8fafc",
+  "description": "Secure e-Voting Engine with real-time OTP authentication and duplicate vote protection."
 }

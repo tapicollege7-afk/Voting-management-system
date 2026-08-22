@@ -49,6 +49,16 @@
       "role": "voter",
       "password_hash": "e5f73606d7a78135fb9a0e33b1afb6c8d1bb2c9ee504e10b11e68b4b0f365673",
       "created_at": "2026-08-21T12:30:55.389Z"
+    },
+    {
+      "id": "usr_1787316480170_brzc",
+      "voter_id": "sumit",
+      "name": "dadadad",
+      "email": "kautuktambakhe177@gmail.com",
+      "phone": "",
+      "role": "voter",
+      "password_hash": "442b2d7af91e907ddc6840ee67d127f056a49fd04beba5daa1a49e47c1c6f337",
+      "created_at": "2026-08-21T12:48:00.170Z"
     }
   ],
   "elections": [],
@@ -91,6 +101,15 @@
       "expires_at": "2026-08-21T12:40:55.390Z",
       "verified": false,
       "created_at": "2026-08-21T12:30:55.391Z"
+    },
+    {
+      "id": "tok_1787316480171",
+      "voter_id": "sumit",
+      "email": "kautuktambakhe177@gmail.com",
+      "token_code": "627560",
+      "expires_at": "2026-08-21T12:58:00.171Z",
+      "verified": false,
+      "created_at": "2026-08-21T12:48:00.171Z"
     }
   ]
 }
