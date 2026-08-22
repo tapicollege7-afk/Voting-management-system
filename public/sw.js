@@ -1,5 +1,5 @@
-// VotePulse Progressive Web App (PWA) Service Worker
-const CACHE_NAME = 'votepulse-pwa-v1';
+// VotePulse Progressive Web App (PWA) Service Worker (Cache Buster v9)
+const CACHE_NAME = 'votepulse-pwa-v99';
 
 const STATIC_ASSETS = [
   './',
@@ -14,37 +14,34 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('⚡ [PWA SW] Pre-caching core PWA static assets');
-      return cache.addAll(STATIC_ASSETS).catch(err => console.warn('[PWA SW] Pre-cache partial warning:', err));
+      return cache.addAll(STATIC_ASSETS).catch(err => console.warn('[PWA SW] Pre-cache warning:', err));
     })
   );
 });
 
-// Service Worker Activation & Cache Cleanup
+// Purge ALL old caches immediately on activate
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('🧹 [PWA SW] Deleting obsolete cache:', key);
-            return caches.delete(key);
-          }
+          console.log('🧹 [PWA SW] Purging old cache:', key);
+          return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
   );
 });
 
-// Fetch Interceptor with Dynamic Caching & API Bypass
+// Fetch Interceptor with Network-First Strategy
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass cache for backend API requests to ensure live vote counts are real-time
+  // Bypass cache for backend API requests
   if (url.pathname.startsWith('/api')) {
     return;
   }
 
-  // Network-First with Cache Fallback for static assets
   if (event.request.method === 'GET') {
     event.respondWith(
       fetch(event.request)
@@ -58,7 +55,6 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // Serve from cache if offline
           return caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) {
               return cachedResponse;
@@ -70,19 +66,4 @@ self.addEventListener('fetch', (event) => {
         })
     );
   }
-});
-
-// Push Notification Handler
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.text() : 'VotePulse Election Alert';
-  const options = {
-    body: data,
-    icon: 'https://cdn-icons-png.flaticon.com/512/927/927295.png',
-    badge: 'https://cdn-icons-png.flaticon.com/512/927/927295.png',
-    vibrate: [100, 50, 100],
-    data: { dateOfArrival: Date.now() }
-  };
-  event.waitUntil(
-    self.registration.showNotification('🗳️ VotePulse Alert', options)
-  );
 });
