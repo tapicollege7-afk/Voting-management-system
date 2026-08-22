@@ -5,17 +5,19 @@ const nodemailer = require('nodemailer');
  * Configure Nodemailer Transporter
  */
 async function createTransporter() {
-  const user = process.env.GMAIL_USER || '';
-  const pass = process.env.GMAIL_APP_PASSWORD || '';
+  const user = (process.env.GMAIL_USER || '').trim();
+  const pass = (process.env.GMAIL_APP_PASSWORD || '').trim().replace(/\s+/g, '');
 
   if (user && pass) {
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user, pass }
     });
   }
 
-  // If no credentials in .env, create Ethereal test account for real preview URL
+  // If no credentials in .env, create Ethereal test account for real web preview URL
   try {
     const testAccount = await nodemailer.createTestAccount();
     return nodemailer.createTransport({

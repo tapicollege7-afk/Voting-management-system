@@ -86,19 +86,16 @@ app.post('/api/auth/register', validateVoterRegistration, async (req, res) => {
     }
 
     const newUser = await db.createUser({ voter_id, name, email, phone, password });
-    const mobileToken = await db.createMobileToken(newUser.voter_id, newUser.phone || newUser.email);
+    const gmailToken = await db.createGmailToken(newUser.voter_id, newUser.email);
 
-    console.log(`\n===================================================`);
-    console.log(`📱 [MOBILE SMS OTP DISPATCH]`);
-    console.log(`   To Voter ID: ${newUser.voter_id}`);
-    console.log(`   Phone Number: ${newUser.phone || 'N/A'}`);
-    console.log(`   SMS OTP Code: [ ${mobileToken.token_code} ]`);
-    console.log(`===================================================\n`);
+    // Send real verification email via Gmail / SMTP
+    const emailResult = await sendGmailVerificationCode(newUser.email, newUser.voter_id, gmailToken.token_code);
 
     return res.status(201).json({
       success: true,
-      message: `Registration initiated! SMS OTP verification code sent to ${newUser.phone || newUser.email}.`,
-      token_code: mobileToken.token_code,
+      message: `Registration initiated! Verification code dispatched to ${newUser.email}.`,
+      token_code: gmailToken.token_code,
+      previewUrl: emailResult?.previewUrl,
       voter: {
         id: newUser.id,
         voter_id: newUser.voter_id,
@@ -112,7 +109,7 @@ app.post('/api/auth/register', validateVoterRegistration, async (req, res) => {
   }
 });
 
-// Authentication: Login Voter & Request Mobile SMS OTP
+// Authentication: Login Voter & Request Real Gmail Verification Code
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { voter_id, password } = req.body;
@@ -129,19 +126,16 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: "Incorrect password." });
     }
 
-    const mobileToken = await db.createMobileToken(user.voter_id, user.phone || user.email);
+    const gmailToken = await db.createGmailToken(user.voter_id, user.email);
 
-    console.log(`\n===================================================`);
-    console.log(`📱 [MOBILE SMS OTP DISPATCH]`);
-    console.log(`   To Voter ID: ${user.voter_id}`);
-    console.log(`   Phone Number: ${user.phone || 'N/A'}`);
-    console.log(`   SMS OTP Code: [ ${mobileToken.token_code} ]`);
-    console.log(`===================================================\n`);
+    // Send real verification email via Gmail / SMTP
+    const emailResult = await sendGmailVerificationCode(user.email, user.voter_id, gmailToken.token_code);
 
     return res.json({
       success: true,
-      message: `Credentials verified. SMS OTP verification code sent to ${user.phone || user.email}.`,
-      token_code: mobileToken.token_code,
+      message: `Credentials verified. Verification code sent to your Gmail (${user.email}).`,
+      token_code: gmailToken.token_code,
+      previewUrl: emailResult?.previewUrl,
       user: {
         id: user.id,
         voter_id: user.voter_id,
@@ -156,24 +150,24 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Mobile OTP Token Verification Endpoint
-app.post('/api/auth/verify-mobile-token', async (req, res) => {
+// Real Gmail Token Verification Endpoint
+app.post('/api/auth/verify-gmail-token', async (req, res) => {
   try {
     const { voter_id, token_code } = req.body;
     if (!voter_id || !token_code) {
-      return res.status(400).json({ success: false, message: "Voter ID and Mobile OTP token code are required." });
+      return res.status(400).json({ success: false, message: "Voter ID and verification token code are required." });
     }
 
-    const isValid = await db.verifyMobileToken(voter_id, token_code);
+    const isValid = await db.verifyGmailToken(voter_id, token_code);
     if (isValid) {
       return res.json({
         success: true,
-        message: "Mobile OTP verification successful. Access granted."
+        message: "Gmail verification successful. Access granted."
       });
     } else {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired Mobile OTP code."
+        message: "Invalid or expired verification token code."
       });
     }
   } catch (err) {
@@ -181,11 +175,11 @@ app.post('/api/auth/verify-mobile-token', async (req, res) => {
   }
 });
 
-// Alias endpoint for backwards compatibility
-app.post('/api/auth/verify-gmail-token', async (req, res) => {
+// Mobile OTP Token Verification Endpoint Alias
+app.post('/api/auth/verify-mobile-token', async (req, res) => {
   try {
     const { voter_id, token_code } = req.body;
-    const isValid = await db.verifyMobileToken(voter_id, token_code);
+    const isValid = await db.verifyGmailToken(voter_id, token_code);
     if (isValid) {
       return res.json({ success: true, message: "Verification successful. Access granted." });
     }
