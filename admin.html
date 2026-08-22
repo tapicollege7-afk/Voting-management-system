@@ -332,7 +332,7 @@
     <!-- Security notice -->
     <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:0.85rem 1rem;margin-bottom:1.5rem;display:flex;gap:10px;font-size:0.78rem;color:#f59e0b;line-height:1.5">
       <span>🔐</span>
-      <span>Default credentials: <strong>ADM-9999</strong> / <strong>admin123</strong></span>
+      <span>Restricted to authorized election administrators.</span>
     </div>
 
     <div id="loginError" style="display:none;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:#ef4444;font-weight:600"></div>
@@ -695,7 +695,7 @@ document.getElementById('loginForm').onsubmit = function(e) {
     errEl.style.display = 'none';
     loadDashboard();
   } else {
-    errEl.textContent = 'Invalid password. Default is admin123.';
+    errEl.textContent = 'Invalid Administrator ID or password.';
     errEl.style.display = 'block';
   }
 };

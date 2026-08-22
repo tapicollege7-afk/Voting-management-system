@@ -123,8 +123,7 @@ function AdminLogin({ onLogin, alertMsg }) {
           }}>
             <span style={{ fontSize: '1.1rem' }}>🔐</span>
             <div style={{ fontSize: '0.78rem', color: '#f59e0b', lineHeight: 1.5 }}>
-              <strong>Secure Access</strong> — This portal is restricted to authorized administrators.
-              Default credentials: <strong>ADM-9999</strong> / <strong>admin123</strong>
+              <strong>Secure Access</strong> — Restricted to authorized election administrators.
             </div>
           </div>
 
@@ -245,7 +244,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
       localStorage.setItem('votepulse_admin', JSON.stringify(u));
       setAdminUser(u);
     } else {
-      showAlert('Invalid credentials. Use admin123 as the password.');
+      showAlert('Invalid Administrator ID or password.');
     }
   };
 
