@@ -28,6 +28,29 @@ const noCacheOptions = {
   }
 };
 
+// ===== PWA CRITICAL: Service Worker must be served at root scope =====
+// The SW file itself needs no-cache so browser always checks for updates
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Content-Type', 'application/javascript');
+  const swPath = path.join(__dirname, 'dist', 'sw.js');
+  if (require('fs').existsSync(swPath)) {
+    return res.sendFile(swPath);
+  }
+  res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
+// Manifest must be at root scope for PWA install eligibility
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Content-Type', 'application/manifest+json');
+  const manifestPath = path.join(__dirname, 'dist', 'manifest.json');
+  if (require('fs').existsSync(manifestPath)) {
+    return res.sendFile(manifestPath);
+  }
+  res.sendFile(path.join(__dirname, 'manifest.json'));
+});
+
 // Serve Static React App & Public Assets
 if (require('fs').existsSync(path.join(__dirname, 'dist'))) {
   app.use('/', express.static(path.join(__dirname, 'dist'), noCacheOptions));

@@ -6,25 +6,45 @@
   <title>VotePulse - Secure Online Voting Platform</title>
 
   <!-- Mobile PWA & App Icons -->
-  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192-BfBVT2HX.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-192-BfBVT2HX.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VotePulse">
-  <link rel="manifest" href="./assets/manifest-DM2kLWjA.json">
+  <link rel="manifest" href="/manifest.json">
 
   <meta name="theme-color" content="#6366f1">
   <meta name="description" content="Secure, authenticated, real-time e-Voting and Election Management platform with duplicate vote protection and React PWA support.">
+
+  <!-- Open Graph / Social -->
+  <meta property="og:title" content="VotePulse - Secure Online Voting Platform">
+  <meta property="og:description" content="Real-time Gmail token authentication with Caesar-Cipher encrypted vote receipts.">
+  <meta property="og:type" content="website">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-wGGR0B0a.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-L1HXOjYb.css">
 </head>
 <body>
   <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(function (reg) {
+            console.log('✅ [PWA] Service Worker registered! Scope:', reg.scope);
+          })
+          .catch(function (err) {
+            console.warn('⚠️ [PWA] Service Worker registration failed:', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
