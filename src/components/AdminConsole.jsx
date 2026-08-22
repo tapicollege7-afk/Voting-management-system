@@ -180,7 +180,7 @@ function AdminLogin({ onLogin, alertMsg }) {
           </form>
 
           <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <a href="index.html" onClick={(e) => { e.preventDefault(); window.location.href = 'index.html'; }} style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); let t = window.location.pathname.replace(/\/admin(\.html)?\/?$/i, '/'); if (!t.endsWith('/')) t += '/'; window.location.href = t; }} style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}>
               ← Go to Voter Portal
             </a>
           </div>
@@ -479,7 +479,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
-            onClick={() => { window.location.href = 'index.html'; }}
+            onClick={(e) => { e.preventDefault(); let t = window.location.pathname.replace(/\/admin(\.html)?\/?$/i, '/'); if (!t.endsWith('/')) t += '/'; window.location.href = t; }}
             className="btn btn-secondary"
             style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}
           >

@@ -401,6 +401,9 @@ app.use('/api/*', (req, res) => {
 });
 
 // ─── Dedicated Admin Page (completely separate from voter SPA) ───────────────
+app.get('/admin/index.html', (req, res) => {
+  res.redirect('/');
+});
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
