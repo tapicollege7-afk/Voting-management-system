@@ -315,12 +315,10 @@ export default function VoterPortal({ user, setUser }) {
           {authTab === 'login' ? (
             <form onSubmit={handleLoginSubmit}>
               <div className="form-group">
-                <label className="form-label">Voter ID / Registered Mobile Number</label>
-                <input className="form-input" type="text" placeholder="e.g. VOT-8899 or +1 555-0199" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
+                <input className="form-input" type="text" placeholder="Voter ID / Mobile Phone" value={loginVoterId} onChange={e => setLoginVoterId(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Password</label>
-                <input className="form-input" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
+                <input className="form-input" type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               </div>
               <button className="btn btn-emerald" style={{ width: '100%', padding: '0.9rem' }} type="submit">
                 Sign In & Send Mobile OTP &rarr;
@@ -329,24 +327,19 @@ export default function VoterPortal({ user, setUser }) {
           ) : (
             <form onSubmit={handleRegisterSubmit}>
               <div className="form-group">
-                <label className="form-label">Voter ID</label>
-                <input className="form-input" type="text" placeholder="e.g. VOT-8899" value={regVoterId} onChange={e => setRegVoterId(e.target.value)} required />
+                <input className="form-input" type="text" placeholder="Voter ID (e.g. VOT-8899)" value={regVoterId} onChange={e => setRegVoterId(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" type="text" placeholder="John Doe" value={regName} onChange={e => setRegName(e.target.value)} required />
+                <input className="form-input" type="text" placeholder="Full Name" value={regName} onChange={e => setRegName(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Mobile Phone Number (For SMS OTP Verification) *</label>
-                <input className="form-input" type="tel" placeholder="+1 555-0199" value={regPhone} onChange={e => setRegPhone(e.target.value)} required />
+                <input className="form-input" type="tel" placeholder="Mobile Phone Number (For SMS OTP) *" value={regPhone} onChange={e => setRegPhone(e.target.value)} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Email Address (Optional)</label>
-                <input className="form-input" type="email" placeholder="voter@example.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+                <input className="form-input" type="email" placeholder="Email Address (Optional)" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Create Password</label>
-                <input className="form-input" type="password" placeholder="••••••••" value={regPassword} onChange={e => handlePasswordChange(e.target.value)} required />
+                <input className="form-input" type="password" placeholder="Create Password" value={regPassword} onChange={e => handlePasswordChange(e.target.value)} required />
                 
                 {/* Real-Time Password Strength Meter */}
                 {regPassword && (

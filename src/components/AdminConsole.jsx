@@ -129,11 +129,10 @@ function AdminLogin({ onLogin, alertMsg }) {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Administrator ID</label>
               <input
                 className="form-input"
                 type="text"
-                placeholder="ADM-9999"
+                placeholder="Administrator ID"
                 value={adminId}
                 onChange={e => setAdminId(e.target.value)}
                 required
@@ -141,11 +140,10 @@ function AdminLogin({ onLogin, alertMsg }) {
               />
             </div>
             <div className="form-group" style={{ position: 'relative' }}>
-              <label className="form-label">Password</label>
               <input
                 className="form-input"
                 type={showPass ? 'text' : 'password'}
-                placeholder="••••••••"
+                placeholder="Password"
                 value={adminPass}
                 onChange={e => setAdminPass(e.target.value)}
                 required
@@ -156,7 +154,7 @@ function AdminLogin({ onLogin, alertMsg }) {
                 type="button"
                 onClick={() => setShowPass(!showPass)}
                 style={{
-                  position: 'absolute', right: '1rem', top: '2.35rem',
+                  position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--text-muted)', fontSize: '1rem',
                 }}
