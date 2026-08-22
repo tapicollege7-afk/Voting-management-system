@@ -374,9 +374,18 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
 
-// Fallback for React SPA routing
+// ─── Dedicated Admin Page (completely separate from voter SPA) ───────────────
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// Fallback for React SPA routing (voter portal)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
+  if (req.path === '/admin' || req.path === '/admin.html') return next();
   const distIndex = path.join(__dirname, 'dist', 'index.html');
   if (require('fs').existsSync(distIndex)) {
     return res.sendFile(distIndex);

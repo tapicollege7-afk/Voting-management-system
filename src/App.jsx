@@ -6,12 +6,13 @@ import BallotAuditTool from './components/BallotAuditTool';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  // Direct Routing: '/' -> voter, '/admin' -> admin, '/audit' -> audit
+  // Direct Routing: '/' or '#voter' -> voter, '/admin' or '#admin' -> admin, '/audit' or '#audit' -> audit
   const getInitialRoute = () => {
-    const path = window.location.pathname;
-    if (path.startsWith('/admin')) return 'admin';
-    if (path.startsWith('/audit')) return 'audit';
-    return 'voter'; // Default route '/' is Voter Portal directly
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path.includes('admin') || hash.includes('admin')) return 'admin';
+    if (path.includes('audit') || hash.includes('audit')) return 'audit';
+    return 'voter';
   };
 
   const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
@@ -19,15 +20,11 @@ export default function App() {
   const [fontScale, setFontScale] = useState(parseFloat(localStorage.getItem('votepulse_font_scale') || '1'));
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // In-Memory Sessions Only (Auto Logout on Page Departure / Back Navigation)
+  // User Sessions
   const [voterUser, setVoterUser] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
 
-  // PWA Install Prompt State
-  const [installPrompt, setInstallPrompt] = useState(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-
+  // Theme and Font Scale effects
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('votepulse_theme', theme);
@@ -38,31 +35,28 @@ export default function App() {
     localStorage.setItem('votepulse_font_scale', fontScale.toString());
   }, [fontScale]);
 
-  // PWA Install Prompt Capture
+  // PWA Install Prompt State
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
   useEffect(() => {
-    // Check if already installed as PWA
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       setIsInstalled(true);
       return;
     }
-
     const handleBeforeInstall = (e) => {
-      e.preventDefault(); // Prevent auto-prompt
-      setInstallPrompt(e); // Save event for later
-      setShowInstallBanner(true); // Show our custom banner
-      console.log('✅ [PWA] beforeinstallprompt captured — install banner shown');
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallBanner(true);
     };
-
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setShowInstallBanner(false);
       setInstallPrompt(null);
-      console.log('✅ [PWA] App installed successfully!');
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleAppInstalled);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -74,28 +68,33 @@ export default function App() {
     try {
       await installPrompt.prompt();
       const result = await installPrompt.userChoice;
-      console.log('[PWA] User install choice:', result.outcome);
       if (result.outcome === 'accepted') {
         setShowInstallBanner(false);
         setInstallPrompt(null);
       }
-    } catch (err) {
-      console.warn('[PWA] Install prompt error:', err);
-    }
+    } catch (_) {}
   };
 
   const dismissInstallBanner = () => {
     setShowInstallBanner(false);
-    // Dismiss for this session, but not permanently
     sessionStorage.setItem('pwa_banner_dismissed', '1');
   };
 
-  // Navigate with strict session auto-logout on route change
+  // Sync hash changes (e.g. back/forward button or URL change)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('admin')) setCurrentRoute('admin');
+      else if (hash.includes('audit')) setCurrentRoute('audit');
+      else setCurrentRoute('voter');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Navigate between modules cleanly
   const navigateTo = (newRoute) => {
-    setVoterUser(null);
-    setAdminUser(null);
-    localStorage.removeItem('votepulse_voter');
-    localStorage.removeItem('votepulse_admin');
+    window.location.hash = newRoute;
     setCurrentRoute(newRoute);
   };
 
