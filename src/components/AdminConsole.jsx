@@ -185,7 +185,6 @@ function AdminLogin({ onLogin, alertMsg }) {
             </a>
           </div>
         </div>
-        </div>
       </div>
     </div>
   );

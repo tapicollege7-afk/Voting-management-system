@@ -6,12 +6,11 @@ import BallotAuditTool from './components/BallotAuditTool';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  // Direct Routing: '/' or '#voter' -> voter, '/admin' or '#admin' -> admin, '/audit' or '#audit' -> audit
+  // Direct Routing: hash '#admin' -> admin, '#audit' -> audit, default -> voter
   const getInitialRoute = () => {
-    const path = window.location.pathname.toLowerCase();
     const hash = window.location.hash.toLowerCase();
-    if (path.includes('admin') || hash.includes('admin')) return 'admin';
-    if (path.includes('audit') || hash.includes('audit')) return 'audit';
+    if (hash.includes('admin')) return 'admin';
+    if (hash.includes('audit')) return 'audit';
     return 'voter';
   };
 
@@ -94,7 +93,11 @@ export default function App() {
 
   // Navigate between modules cleanly
   const navigateTo = (newRoute) => {
-    window.location.hash = newRoute;
+    if (newRoute === 'voter') {
+      window.location.hash = '';
+    } else {
+      window.location.hash = newRoute;
+    }
     setCurrentRoute(newRoute);
   };
 
