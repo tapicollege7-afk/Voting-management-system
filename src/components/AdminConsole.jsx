@@ -178,6 +178,13 @@ function AdminLogin({ onLogin, alertMsg }) {
               🔑 Access Admin Dashboard
             </button>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <a href="./" onClick={(e) => { e.preventDefault(); window.location.href = './'; }} style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textDecoration: 'none', fontWeight: 600 }}>
+              ← Go to Voter Portal
+            </a>
+          </div>
+        </div>
         </div>
       </div>
     </div>
@@ -472,6 +479,13 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={() => { window.location.href = './'; }}
+            className="btn btn-secondary"
+            style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            🗳️ Voter Portal
+          </button>
           <button
             onClick={fetchAdminStats}
             className="btn btn-secondary"
