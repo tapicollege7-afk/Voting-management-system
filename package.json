@@ -5,10 +5,10 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server",
     "dev": "vite",
     "build": "vite build",
-    "server": "node server.js"
+    "server": "node server"
   },
   "keywords": [
     "online-voting",
