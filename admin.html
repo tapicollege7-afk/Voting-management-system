@@ -396,6 +396,9 @@
     <button class="nav-item" onclick="showPage('audit')">
       <span class="nav-icon">🔍</span> Ballot Audit
     </button>
+    <button class="nav-item" onclick="showPage('database'); fetchDatabaseInfo();">
+      <span class="nav-icon">🗄️</span> Database UI
+    </button>
 
     <div class="sidebar-footer">
       <div class="sidebar-user">
@@ -497,7 +500,7 @@
       <div class="card" style="padding:0">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>#</th><th>Voter ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Registered</th><th>Role</th></tr></thead>
+            <thead><tr><th>#</th><th>Voter ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Registered</th><th>Role</th><th>Action</th></tr></thead>
             <tbody id="votersTbody"></tbody>
           </table>
         </div>
@@ -530,6 +533,56 @@
         </div>
         <button class="btn btn-primary" onclick="runAudit()" style="margin-bottom:1.5rem">🔍 Verify Ballot</button>
         <div id="auditResult"></div>
+      </div>
+    <!-- ════ PAGE: DATABASE VISUALIZER ════ -->
+    <div id="page-database" class="page">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+        <div>
+          <h2 class="gradient-text-neon">🗄️ Database Visualizer & Manager</h2>
+          <p>Real-time visual monitoring for Hybrid SQL (SQLite) & NoSQL (MongoDB) storage engines.</p>
+        </div>
+        <button class="btn btn-primary" onclick="fetchDatabaseInfo()">🔄 Refresh DB Status</button>
+      </div>
+
+      <div id="dbVisualizerContent">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:1rem;margin-bottom:1.5rem">
+          <div class="card glass-card">
+            <h4 style="color:var(--muted);font-size:0.8rem">DB ARCHITECTURE MODE</h4>
+            <h2 id="dbModeText" style="color:#38bdf8;margin-top:0.5rem;font-size:1.3rem">Hybrid SQL + NoSQL</h2>
+          </div>
+          <div class="card glass-card">
+            <h4 style="color:var(--muted);font-size:0.8rem">RELATIONAL SQL ENGINE</h4>
+            <h2 id="dbSqlText" style="color:#10b981;margin-top:0.5rem;font-size:1.1rem">SQLite 3 Active</h2>
+          </div>
+          <div class="card glass-card">
+            <h4 style="color:var(--muted);font-size:0.8rem">NOSQL DOCUMENT ENGINE</h4>
+            <h2 id="dbNosqlText" style="color:#c084fc;margin-top:0.5rem;font-size:1.1rem">MongoDB Ingest Stream</h2>
+          </div>
+        </div>
+
+        <div class="card glass-panel" style="padding:1.5rem">
+          <h3 style="margin-bottom:1rem">📊 Live Storage Schemas & Document Counts</h3>
+          <div class="table-wrap glass-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Collection / Table Name</th>
+                  <th>Engine Type</th>
+                  <th>Primary Key Index</th>
+                  <th>Total Document Count</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="dbTablesTbody">
+                <tr><td>users</td><td>SQL & NoSQL</td><td>voter_id (UNIQUE)</td><td id="cntUsers">—</td><td><span class="badge badge-indigo">OPTIMAL</span></td></tr>
+                <tr><td>elections</td><td>SQL & NoSQL</td><td>id (PRIMARY KEY)</td><td id="cntElections">—</td><td><span class="badge badge-indigo">OPTIMAL</span></td></tr>
+                <tr><td>candidates</td><td>SQL & NoSQL</td><td>id (FOREIGN KEY)</td><td id="cntCandidates">—</td><td><span class="badge badge-indigo">OPTIMAL</span></td></tr>
+                <tr><td>votes</td><td>NoSQL & SQL</td><td>sha256_hash (SEAL)</td><td id="cntVotes">—</td><td><span class="badge badge-indigo">ENCRYPTED</span></td></tr>
+                <tr><td>gmail_tokens</td><td>NoSQL</td><td>voter_id (TTL 10m)</td><td id="cntTokens">—</td><td><span class="badge badge-amber">AUTO-EXPIRE</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -990,8 +1043,31 @@ function deleteCandidate(id, name) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VOTERS
+// VOTERS & USER DELETION
 // ─────────────────────────────────────────────────────────────────────────────
+async function deleteUserAction(voterId, name) {
+  if (voterId.toUpperCase() === 'ADM-9999') {
+    showAlert('System Primary Administrator (ADM-9999) cannot be deleted.', 'error');
+    return;
+  }
+  if (!confirm(`Are you sure you want to delete user "${name}" (${voterId})? This action is permanent.`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${voterId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showAlert(`User "${name}" deleted successfully.`);
+      voters = voters.filter(v => v.voter_id !== voterId);
+      renderVoters();
+      updateNavBadges();
+    } else {
+      showAlert(data.message || 'Failed to delete user.', 'error');
+    }
+  } catch (err) {
+    showAlert('Error connecting to server.', 'error');
+  }
+}
+
 function renderVoters() {
   const q    = (document.getElementById('voterSearch')?.value||'').toLowerCase();
   const list = [
@@ -1005,14 +1081,41 @@ function renderVoters() {
 
   document.getElementById('votersTbody').innerHTML = list.map((v,i) => `
     <tr style="${v.role==='admin'?'background:rgba(245,158,11,0.05)':''}">
-      <td style="color:var(--muted);font-size:0.78rem">${i}</td>
-      <td><span style="font-family:monospace;font-weight:800;color:${v.role==='admin'?'var(--primary)':'var(--indigo)'}">${v.voter_id}</span></td>
+      <td style="color:var(--muted);font-size:0.78rem">${i + 1}</td>
+      <td><span style="font-family:monospace;font-weight:800;color:${v.role==='admin'?'#f59e0b':'#10b981'}">${v.voter_id}</span></td>
       <td><strong>${v.name}</strong></td>
       <td style="color:var(--muted)">${v.email||'—'}</td>
       <td style="color:var(--muted)">${v.phone||'—'}</td>
       <td style="color:var(--muted)">${v.created_at?new Date(v.created_at).toLocaleDateString():'—'}</td>
       <td><span class="badge ${v.role==='admin'?'badge-amber':'badge-indigo'}">${(v.role||'voter').toUpperCase()}</span></td>
+      <td>
+        ${v.voter_id === 'ADM-9999' ? '<span style="color:var(--muted);font-size:0.75rem;font-weight:700">Protected</span>' :
+          `<button class="btn-danger-glass" onclick="deleteUserAction('${v.voter_id}', '${v.name.replace(/'/g, "\\'")}')">🗑️ Delete</button>`
+        }
+      </td>
     </tr>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATABASE ENGINE VISUALIZER
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchDatabaseInfo() {
+  try {
+    const res = await fetch('/api/admin/db-info');
+    const data = await res.json();
+    if (res.ok && data.success && data.metadata) {
+      const meta = data.metadata;
+      document.getElementById('dbModeText').textContent = meta.mode || 'HYBRID Mode';
+      if (meta.sql_engine && meta.sql_engine.tables) {
+        const tbl = meta.sql_engine.tables;
+        document.getElementById('cntUsers').textContent = tbl.users ? tbl.users.total : 0;
+        document.getElementById('cntElections').textContent = tbl.elections || 0;
+        document.getElementById('cntCandidates').textContent = tbl.candidates || 0;
+        document.getElementById('cntVotes').textContent = tbl.votes || 0;
+        document.getElementById('cntTokens').textContent = tbl.gmail_tokens || 0;
+      }
+    }
+  } catch (err) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

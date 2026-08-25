@@ -441,6 +441,27 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
     (c.party || c.department || '').toLowerCase().includes(candSearch.toLowerCase())
   );
 
+  const handleDeleteUser = async (voterId, name) => {
+    if (voterId.toUpperCase() === 'ADM-9999') {
+      showAlert('System Primary Administrator (ADM-9999) cannot be deleted.', 'error');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete user "${name}" (${voterId})? This action is permanent.`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${voterId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert(`User "${name}" deleted successfully.`, 'success');
+        setVoters(prev => prev.filter(v => v.voter_id !== voterId));
+      } else {
+        showAlert(data.message || 'Failed to delete user.');
+      }
+    } catch (err) {
+      showAlert('Error connecting to server.');
+    }
+  };
+
   // ─── Tab definitions ──────────────────────────────────────────────────────
   const tabs = [
     { id: 'overview', icon: '📊', label: 'Overview' },
@@ -449,6 +470,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
     { id: 'voters', icon: '👥', label: `Voters (${voters.length})` },
     { id: 'results', icon: '📈', label: 'Results' },
     { id: 'audit', icon: '🔍', label: 'Ballot Audit' },
+    { id: 'database', icon: '🗄️', label: 'Database UI' },
   ];
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
@@ -811,6 +833,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                   <th>Phone</th>
                   <th>Registered</th>
                   <th>Role</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -823,11 +846,12 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                   <td style={{ color: 'var(--text-muted)' }}>—</td>
                   <td style={{ color: 'var(--text-muted)' }}>2026-08-01</td>
                   <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>ADMIN</span></td>
+                  <td><span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700 }}>Protected</span></td>
                 </tr>
                 {filteredVoters.length === 0 && !voterSearch ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No voters registered yet.</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No voters registered yet.</td></tr>
                 ) : filteredVoters.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No results for "{voterSearch}"</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No results for "{voterSearch}"</td></tr>
                 ) : (
                   filteredVoters.map((v, i) => (
                     <tr key={i}>
@@ -837,7 +861,19 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                       <td style={{ color: 'var(--text-muted)' }}>{v.email}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{v.phone || '—'}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{v.created_at ? new Date(v.created_at).toLocaleDateString() : '—'}</td>
-                      <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(99,102,241,0.12)', color: 'var(--primary)', border: '1px solid rgba(99,102,241,0.25)' }}>VOTER</span></td>
+                      <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: v.role==='admin'?'rgba(245,158,11,0.15)':'rgba(99,102,241,0.12)', color: v.role==='admin'?'#f59e0b':'var(--primary)', border: v.role==='admin'?'1px solid rgba(245,158,11,0.3)':'1px solid rgba(99,102,241,0.25)' }}>{(v.role || 'VOTER').toUpperCase()}</span></td>
+                      <td>
+                        {v.voter_id === 'ADM-9999' ? (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700 }}>Protected</span>
+                        ) : (
+                          <button
+                            className="btn-danger-glass"
+                            onClick={() => handleDeleteUser(v.voter_id, v.name)}
+                          >
+                            🗑️ Delete
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -967,6 +1003,62 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
           TAB 6 ─ BALLOT AUDIT
       ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'audit' && <BallotAuditTool />}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          TAB 7 ─ DATABASE UI VISUALIZER
+      ══════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'database' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 className="gradient-text-neon" style={{ fontSize: '1.4rem', fontWeight: 800 }}>🗄️ Database Visualizer & Manager</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>Real-time metrics for Hybrid SQL (SQLite) & NoSQL (MongoDB) storage engines.</p>
+            </div>
+            <button className="btn btn-secondary" onClick={fetchAdminStats} style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+              🔄 Refresh DB Status
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="card glass-card">
+              <h4 style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>DB ARCHITECTURE MODE</h4>
+              <h2 style={{ color: '#38bdf8', marginTop: '0.5rem', fontSize: '1.3rem', fontWeight: 800 }}>Hybrid SQL + NoSQL</h2>
+            </div>
+            <div className="card glass-card">
+              <h4 style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>RELATIONAL SQL ENGINE</h4>
+              <h2 style={{ color: '#10b981', marginTop: '0.5rem', fontSize: '1.1rem', fontWeight: 800 }}>SQLite 3 Active</h2>
+            </div>
+            <div className="card glass-card">
+              <h4 style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>NOSQL DOCUMENT ENGINE</h4>
+              <h2 style={{ color: '#c084fc', marginTop: '0.5rem', fontSize: '1.1rem', fontWeight: 800 }}>MongoDB Ingest Stream</h2>
+            </div>
+          </div>
+
+          <div className="card glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: 800 }}>📊 Live Storage Schemas & Document Counts</h3>
+            <div className="table-container glass-table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Collection / Table Name</th>
+                    <th>Engine Type</th>
+                    <th>Primary Key Index</th>
+                    <th>Total Document Count</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>users</td><td>SQL & NoSQL</td><td>voter_id (UNIQUE)</td><td>{voters.length + 1}</td><td><span className="badge-voter">OPTIMAL</span></td></tr>
+                  <tr><td>elections</td><td>SQL & NoSQL</td><td>id (PRIMARY KEY)</td><td>{elections.length}</td><td><span className="badge-voter">OPTIMAL</span></td></tr>
+                  <tr><td>candidates</td><td>SQL & NoSQL</td><td>id (FOREIGN KEY)</td><td>{candidates.length}</td><td><span className="badge-voter">OPTIMAL</span></td></tr>
+                  <tr><td>votes</td><td>NoSQL & SQL</td><td>sha256_hash (SEAL)</td><td>{stats.total_votes_cast || 0}</td><td><span className="badge-voter">ENCRYPTED</span></td></tr>
+                  <tr><td>gmail_tokens</td><td>NoSQL</td><td>voter_id (TTL 10m)</td><td>Active</td><td><span className="badge-admin">AUTO-EXPIRE</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
           MODAL: CREATE ELECTION

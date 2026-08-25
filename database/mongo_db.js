@@ -316,6 +316,42 @@ class MongoDatabase {
     };
   }
 
+  async deleteUser(voter_id) {
+    if (!voter_id) throw new Error("Voter ID is required for deletion.");
+    const clean = voter_id.trim();
+    if (clean.toUpperCase() === 'ADM-9999') {
+      throw new Error("System Primary Administrator (ADM-9999) cannot be deleted.");
+    }
+    const user = await this.findUserByVoterId(clean);
+    if (!user) throw new Error("User not found.");
+
+    await User.deleteOne({ voter_id: { $regex: new RegExp(`^${clean}$`, 'i') } });
+    await GmailToken.deleteMany({ voter_id: { $regex: new RegExp(`^${clean}$`, 'i') } });
+    return { success: true, message: `User ${user.name} (${user.voter_id}) deleted successfully.` };
+  }
+
+  async getDatabaseMetadata() {
+    const usersCount = await User.countDocuments();
+    const votersCount = await User.countDocuments({ role: 'voter' });
+    const adminsCount = await User.countDocuments({ role: 'admin' });
+    const electionsCount = await Election.countDocuments();
+    const candidatesCount = await Candidate.countDocuments();
+    const votesCount = await Vote.countDocuments();
+    const tokensCount = await GmailToken.countDocuments();
+
+    return {
+      engine: 'MongoDB (NoSQL Document Store)',
+      connection: mongoose.connection.name || 'votepulse',
+      collections: {
+        users: { total: usersCount, voters: votersCount, admins: adminsCount },
+        elections: electionsCount,
+        candidates: candidatesCount,
+        votes: votesCount,
+        gmail_tokens: tokensCount
+      }
+    };
+  }
+
   async getAllVoters() {
     return await User.find({}, 'id voter_id name email phone role created_at').sort({ created_at: -1 }).lean();
   }

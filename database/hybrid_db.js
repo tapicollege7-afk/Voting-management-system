@@ -160,6 +160,42 @@ class HybridDatabaseManager {
     return await sqliteDb.auditBallotByHash(searchHash);
   }
 
+  async deleteUser(voter_id) {
+    if (!voter_id) throw new Error("Voter ID is required for deletion.");
+    const clean = voter_id.trim();
+    if (clean.toUpperCase() === 'ADM-9999') {
+      throw new Error("System Primary Administrator (ADM-9999) cannot be deleted.");
+    }
+    const sqlRes = await sqliteDb.deleteUser(clean);
+    if (this.isMongoActive) {
+      try {
+        await mongoDb.deleteUser(clean);
+      } catch (e) {}
+    }
+    return sqlRes;
+  }
+
+  async getDatabaseMetadata() {
+    const sqlMeta = await sqliteDb.getDatabaseMetadata();
+    if (this.isMongoActive) {
+      try {
+        const mongoMeta = await mongoDb.getDatabaseMetadata();
+        return {
+          mode: 'HYBRID (SQL + NoSQL)',
+          sql_engine: sqlMeta,
+          nosql_engine: mongoMeta,
+          active: true
+        };
+      } catch (e) {}
+    }
+    return {
+      mode: 'SQL (SQLite Engine)',
+      sql_engine: sqlMeta,
+      nosql_engine: { engine: 'MongoDB (Inactive - Set MONGODB_URI to enable)', active: false },
+      active: false
+    };
+  }
+
   async getStats() {
     const sqlStats = await sqliteDb.getStats();
     if (this.isMongoActive) {

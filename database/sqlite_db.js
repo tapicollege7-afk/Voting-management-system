@@ -358,6 +358,50 @@ class SQLiteDatabase {
     };
   }
 
+  // Delete User (Voter or Admin)
+  async deleteUser(voter_id) {
+    if (!voter_id) throw new Error("Voter ID is required for deletion.");
+    const clean = voter_id.trim();
+    if (clean.toUpperCase() === 'ADM-9999') {
+      throw new Error("System Primary Administrator (ADM-9999) cannot be deleted.");
+    }
+    const user = await this.findUserByVoterId(clean);
+    if (!user) throw new Error("User not found.");
+
+    await dbRun(`DELETE FROM users WHERE LOWER(voter_id) = ?`, [clean.toLowerCase()]);
+    await dbRun(`DELETE FROM gmail_tokens WHERE LOWER(voter_id) = ?`, [clean.toLowerCase()]);
+    return { success: true, message: `User ${user.name} (${user.voter_id}) deleted successfully.` };
+  }
+
+  async getDatabaseMetadata() {
+    const usersCount = await dbGet(`SELECT COUNT(*) as cnt FROM users`);
+    const votersCount = await dbGet(`SELECT COUNT(*) as cnt FROM users WHERE role = 'voter'`);
+    const adminsCount = await dbGet(`SELECT COUNT(*) as cnt FROM users WHERE role = 'admin'`);
+    const electionsCount = await dbGet(`SELECT COUNT(*) as cnt FROM elections`);
+    const candidatesCount = await dbGet(`SELECT COUNT(*) as cnt FROM candidates`);
+    const votesCount = await dbGet(`SELECT COUNT(*) as cnt FROM votes`);
+    const tokensCount = await dbGet(`SELECT COUNT(*) as cnt FROM gmail_tokens`);
+
+    let fileSizeKB = 'N/A';
+    try {
+      const stats = fs.statSync(DB_PATH);
+      fileSizeKB = (stats.size / 1024).toFixed(2) + ' KB';
+    } catch (e) {}
+
+    return {
+      engine: 'SQLite 3 (Relational SQL)',
+      path: DB_PATH,
+      storage_size: fileSizeKB,
+      tables: {
+        users: { total: usersCount ? usersCount.cnt : 0, voters: votersCount ? votersCount.cnt : 0, admins: adminsCount ? adminsCount.cnt : 0 },
+        elections: electionsCount ? electionsCount.cnt : 0,
+        candidates: candidatesCount ? candidatesCount.cnt : 0,
+        votes: votesCount ? votesCount.cnt : 0,
+        gmail_tokens: tokensCount ? tokensCount.cnt : 0
+      }
+    };
+  }
+
   // Get all voters (for Admin Dashboard)
   async getAllVoters() {
     return await dbAll(`SELECT id, voter_id, name, email, phone, role, created_at FROM users ORDER BY created_at DESC`);

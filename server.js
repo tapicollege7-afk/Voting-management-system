@@ -352,6 +352,34 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
+// Admin: Delete User (Voter or Admin)
+app.delete('/api/admin/users/:voter_id', async (req, res) => {
+  try {
+    const { voter_id } = req.params;
+    if (!voter_id) return res.status(400).json({ success: false, message: "Voter ID is required." });
+
+    if (voter_id.toUpperCase() === 'ADM-9999') {
+      return res.status(403).json({ success: false, message: "System Primary Administrator (ADM-9999) cannot be deleted." });
+    }
+
+    const result = await db.deleteUser(voter_id);
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Get Visual Database Engine Metadata & Health
+app.get('/api/admin/db-info', async (req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const metadata = await db.getDatabaseMetadata();
+    res.json({ success: true, metadata });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Admin Live Tally Breakdown
 app.get('/api/admin/results/:election_id', async (req, res) => {
   try {
