@@ -352,10 +352,10 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 });
 
-// Admin: Delete User (Voter or Admin)
-app.delete('/api/admin/users/:voter_id', async (req, res) => {
+// Admin: Delete User (Voter or Admin) - Supports DELETE, POST, and GET
+const handleDeleteUserRoute = async (req, res) => {
   try {
-    const { voter_id } = req.params;
+    const voter_id = req.params.voter_id || req.body?.voter_id || req.query?.voter_id;
     if (!voter_id) return res.status(400).json({ success: false, message: "Voter ID is required." });
 
     if (voter_id.toUpperCase() === 'ADM-9999') {
@@ -367,7 +367,11 @@ app.delete('/api/admin/users/:voter_id', async (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
-});
+};
+
+app.delete('/api/admin/users/:voter_id', handleDeleteUserRoute);
+app.post('/api/admin/users/delete', handleDeleteUserRoute);
+app.get('/api/admin/users/delete/:voter_id', handleDeleteUserRoute);
 
 // Admin: Get Visual Database Engine Metadata & Health
 app.get('/api/admin/db-info', async (req, res) => {

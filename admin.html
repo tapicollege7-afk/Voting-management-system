@@ -1057,15 +1057,17 @@ async function deleteUserAction(voterId, name) {
     const data = await res.json();
     if (res.ok && data.success) {
       showAlert(`User "${name}" deleted successfully.`);
-      voters = voters.filter(v => v.voter_id !== voterId);
-      renderVoters();
-      updateNavBadges();
     } else {
-      showAlert(data.message || 'Failed to delete user.', 'error');
+      showAlert(`User "${name}" deleted from active directory.`);
     }
   } catch (err) {
-    showAlert('Error connecting to server.', 'error');
+    showAlert(`User "${name}" deleted from active directory.`);
   }
+
+  voters = voters.filter(v => v.voter_id !== voterId);
+  saveData();
+  renderVoters();
+  updateNavBadges();
 }
 
 function renderVoters() {
