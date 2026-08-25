@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
   const [showSecretModal, setShowSecretModal] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [adminIdInput, setAdminIdInput] = useState('');
   const [adminPassInput, setAdminPassInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -36,6 +37,14 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Reactive VOTER ACCESS Button Click -> Go directly to Admin Module!
+  const handleVoterAccessClick = () => {
+    setIsRedirecting(true);
+    setTimeout(() => {
+      window.location.href = 'admin.html';
+    }, 250);
+  };
+
   const handleSecretLogin = (e) => {
     e.preventDefault();
     if (!adminIdInput.trim() || !adminPassInput.trim()) {
@@ -56,23 +65,38 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
         <div className="header-container">
           <div
             className="brand"
-            onClick={handleLogoClick}
-            style={{ cursor: 'pointer', userSelect: 'none', transition: 'all 0.3s ease' }}
+            onClick={() => navigateTo('voter')}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
             title="VotePulse Platform"
           >
-            <div className="brand-icon" style={{
-              filter: tapCount > 0 ? `drop-shadow(0 0 12px #f59e0b)` : 'none',
-              transform: tapCount > 0 ? `scale(${1 + tapCount * 0.1})` : 'none',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}>⚡</div>
+            <div
+              className="brand-icon"
+              onClick={(e) => { e.stopPropagation(); handleLogoClick(); }}
+              style={{
+                filter: tapCount > 0 ? `drop-shadow(0 0 12px #f59e0b)` : 'none',
+                transform: tapCount > 0 ? `scale(${1 + tapCount * 0.1})` : 'none',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+              title="Secret Logo Gate (Triple-Click)"
+            >⚡</div>
             <div>
               <div className="brand-title">VotePulse</div>
               <div className="brand-subtitle">Secure Online Voting Platform</div>
             </div>
-            <span className="brand-badge">Voter Portal</span>
           </div>
 
-          <div className="header-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="header-nav" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Reactive VOTER ACCESS Button -> Navigates to Admin Module */}
+            <button
+              className="btn-voter-access-reactive"
+              onClick={handleVoterAccessClick}
+              title="Click to Switch to Admin Module"
+            >
+              <span className="voter-access-pulse"></span>
+              <span style={{ fontSize: '0.9rem' }}>🛡️</span>
+              <span>{isRedirecting ? '⚡ SWITCHING TO ADMIN...' : 'VOTER ACCESS'}</span>
+            </button>
+
             <button className="icon-btn" onClick={onOpenSettings} title="System Settings">
               ⚙️
             </button>
@@ -80,7 +104,7 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
         </div>
       </header>
 
-      {/* ════ secret admin gate modal (hidden innovation) ════ */}
+      {/* ════ secret admin gate modal ════ */}
       {showSecretModal && (
         <div
           className="modal-backdrop"
