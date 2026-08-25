@@ -1,45 +1,46 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap');
 
 :root {
-  /* Color Palette - Dark Glassmorphism Theme */
-  --bg-dark: #090d16;
-  --bg-card: rgba(15, 23, 42, 0.75);
+  /* Color Palette - Rich Imperial Gold & Midnight Emerald Glassmorphism Theme */
+  --bg-dark: #050814;
+  --bg-card: rgba(15, 23, 42, 0.65);
   --bg-card-hover: rgba(30, 41, 59, 0.85);
   --border-glass: rgba(255, 255, 255, 0.12);
-  --border-glass-glow: rgba(99, 102, 241, 0.4);
+  --border-glass-glow: rgba(245, 158, 11, 0.45);
 
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.35);
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.35);
 
   --accent-emerald: #10b981;
   --emerald-glow: rgba(16, 185, 129, 0.35);
 
-  --accent-amber: #f59e0b;
+  --accent-gold: #f59e0b;
+  --gold-glow: rgba(245, 158, 11, 0.4);
   --danger: #ef4444;
 
   --font-scale: 1;
 }
 
 [data-theme="light"] {
-  --bg-dark: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(241, 245, 249, 0.95);
-  --border-glass: rgba(15, 23, 42, 0.1);
-  --border-glass-glow: rgba(99, 102, 241, 0.3);
+  --bg-dark: #0f172a;
+  --bg-card: rgba(30, 41, 59, 0.75);
+  --bg-card-hover: rgba(51, 65, 85, 0.9);
+  --border-glass: rgba(255, 255, 255, 0.15);
+  --border-glass-glow: rgba(245, 158, 11, 0.4);
 
-  --text-main: #0f172a;
-  --text-muted: #64748b;
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-glow: rgba(79, 70, 229, 0.2);
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.3);
 
-  --accent-emerald: #059669;
-  --emerald-glow: rgba(5, 150, 105, 0.2);
+  --accent-emerald: #10b981;
+  --emerald-glow: rgba(16, 185, 129, 0.3);
 }
 
 * {
@@ -52,8 +53,9 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-dark);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.12) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.18) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.15) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.14) 0px, transparent 50%);
   background-attachment: fixed;
   color: var(--text-main);
   font-size: calc(1rem * var(--font-scale));

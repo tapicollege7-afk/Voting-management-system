@@ -504,11 +504,11 @@ export default function VoterPortal({ user, setUser }) {
       {/* VOTE CONFIRMATION MODAL */}
       {showVoteConfirmModal && selectedCandidate && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ textAlign: 'center' }}>
+          <div className="modal-content glass-panel" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🗳️</div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Confirm Your Encrypted Ballot Selection</h2>
             <p style={{ margin: '1rem 0', fontSize: '1rem' }}>Are you sure you want to cast your single vote for:</p>
-            <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid var(--primary)', padding: '1rem', borderRadius: '14px', fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--accent-emerald)', padding: '1rem', borderRadius: '14px', fontSize: '1.3rem', fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '1.5rem' }}>
               {selectedCandidate.name} ({selectedCandidate.department})
             </div>
 
@@ -519,6 +519,18 @@ export default function VoterPortal({ user, setUser }) {
           </div>
         </div>
       )}
+
+      {/* Secret Trigger 3: Secret Double-Click on Security Shield Footer */}
+      <footer style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '4rem', padding: '2rem 0 1rem 0' }}>
+        <span
+          onDoubleClick={() => { window.location.href = 'admin.html'; }}
+          style={{ cursor: 'pointer', userSelect: 'none', transition: 'all 0.3s ease' }}
+          title="Cryptographic Security"
+          className="gradient-text-neon"
+        >
+          🛡️ End-to-End Cryptographic Ballot Security & Integrity Protocol
+        </span>
+      </footer>
     </div>
   );
 }
