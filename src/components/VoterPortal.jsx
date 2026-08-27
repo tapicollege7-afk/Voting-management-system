@@ -51,10 +51,16 @@ export default function VoterPortal({ user, setUser }) {
     }
   }, [user]);
 
-  // Load candidates when election changes
+  // Load candidates when election changes & poll live updates every 3 seconds
   useEffect(() => {
     if (user && selectedElectionId) {
       checkVoteStatus(selectedElectionId);
+
+      const timer = setInterval(() => {
+        loadCandidates(selectedElectionId);
+      }, 3000);
+
+      return () => clearInterval(timer);
     }
   }, [user, selectedElectionId]);
 
@@ -231,9 +237,7 @@ export default function VoterPortal({ user, setUser }) {
     setVotedCaesarHash(caesar);
     setVotedSha256Hash(sha256);
 
-    if (!voted) {
-      loadCandidates(elecId);
-    }
+    loadCandidates(elecId);
   };
 
   const loadCandidates = async (elecId) => {
@@ -424,6 +428,10 @@ export default function VoterPortal({ user, setUser }) {
   // Active Voter Dashboard View
   const selectedElection = elections.find(e => e.id === selectedElectionId);
 
+  // Calculate Live Tally Metrics
+  const totalVotesCast = candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
+  const maxVotes = candidates.length > 0 ? Math.max(...candidates.map(c => c.vote_count || 0)) : 0;
+
   return (
     <div className="main-container">
       {/* Voter Header Tag */}
@@ -493,8 +501,15 @@ export default function VoterPortal({ user, setUser }) {
             </div>
           ) : (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Official Ballot Candidates</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.5rem' }}>Review the candidate details below and cast your encrypted vote.</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.2rem' }}>Official Ballot Candidates</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>Review the candidate details below and cast your encrypted vote.</p>
+                </div>
+                <span className="live-pulse-badge">
+                  <span className="live-dot"></span> LIVE RESULTS STREAMING
+                </span>
+              </div>
 
               {candidates.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '18px', color: 'var(--text-muted)' }}>
@@ -502,28 +517,110 @@ export default function VoterPortal({ user, setUser }) {
                 </div>
               ) : (
                 <div className="candidate-grid">
-                  {candidates.map(c => (
-                    <div key={c.id} className="candidate-card">
-                      <div className="candidate-img-box">
-                        <img src={c.photo_url} alt={c.name} className="candidate-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300'; }} />
-                      </div>
-                      <div className="candidate-body">
-                        <div>
-                          <h3 className="candidate-name">{c.name}</h3>
-                          <div className="candidate-dept">{c.department}</div>
-                          <p className="candidate-manifesto">"{c.manifesto}"</p>
+                  {candidates.map(c => {
+                    const votes = c.vote_count || 0;
+                    const pct = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
+                    const isLeader = votes > 0 && votes === maxVotes;
+
+                    return (
+                      <div key={c.id} className="candidate-card" style={{ border: isLeader ? '1px solid rgba(245,158,11,0.4)' : '1px solid var(--border-glass)' }}>
+                        <div className="candidate-img-box" style={{ position: 'relative' }}>
+                          <img src={c.photo_url} alt={c.name} className="candidate-img" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300'; }} />
+                          {isLeader && (
+                            <span style={{ position: 'absolute', top: '10px', right: '10px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '3px 8px', borderRadius: '8px', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+                              👑 LEADER
+                            </span>
+                          )}
                         </div>
-                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
-                          Vote for Candidate
-                        </button>
+                        <div className="candidate-body">
+                          <div>
+                            <h3 className="candidate-name">{c.name}</h3>
+                            <div className="candidate-dept">{c.department}</div>
+                            <p className="candidate-manifesto">"{c.manifesto}"</p>
+
+                            {/* Live Standings Progress Bar */}
+                            <div style={{ margin: '1rem 0 0.8rem 0', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '4px' }}>
+                                <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Live Tally</span>
+                                <span style={{ fontWeight: 800, color: isLeader ? '#f59e0b' : 'var(--primary)' }}>{pct}% ({votes} {votes === 1 ? 'vote' : 'votes'})</span>
+                              </div>
+                              <div className="live-tally-bar-wrap">
+                                <div className={`live-tally-bar-fill ${isLeader ? 'leader' : ''}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                          <button className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
+                            Vote for Candidate
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
+
+          {/* Real-Time Live Election Standings Scoreboard (Visible Before & After Voting) */}
+          {candidates.length > 0 && (
+            <div style={{ marginTop: '2.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '20px', padding: '1.5rem', backdropFilter: 'blur(16px)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span className="live-pulse-badge">
+                    <span className="live-dot"></span> LIVE REAL-TIME STANDINGS
+                  </span>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Real-Time Election Results</h3>
+                </div>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, background: 'rgba(255,255,255,0.06)', padding: '4px 12px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+                  📊 Total Votes Cast: <strong style={{ color: '#f59e0b' }}>{totalVotesCast}</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {candidates.map(c => {
+                  const votes = c.vote_count || 0;
+                  const pct = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
+                  const isLeader = votes > 0 && votes === maxVotes;
+
+                  return (
+                    <div key={c.id} style={{
+                      background: isLeader ? 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(16,185,129,0.05))' : 'rgba(255,255,255,0.03)',
+                      border: isLeader ? '1px solid rgba(245,158,11,0.35)' : '1px solid var(--border-glass)',
+                      borderRadius: '14px',
+                      padding: '1rem 1.25rem',
+                      transition: 'all 0.4s ease'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <img src={c.photo_url} alt={c.name} style={{ width: '38px', height: '38px', borderRadius: '10px', objectFit: 'cover' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300';}} />
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {c.name}
+                              {isLeader && <span style={{ fontSize: '0.68rem', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', padding: '2px 8px', borderRadius: '8px', fontWeight: 800 }}>👑 LEADING</span>}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.department || c.party}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 800, fontSize: '1.05rem', color: isLeader ? '#f59e0b' : 'var(--primary)' }}>{pct}%</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{votes} {votes === 1 ? 'vote' : 'votes'}</div>
+                        </div>
+                      </div>
+
+                      <div className="live-tally-bar-wrap">
+                        <div
+                          className={`live-tally-bar-fill ${isLeader ? 'leader' : ''}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
+
       )}
 
       {/* VOTE CONFIRMATION MODAL */}
