@@ -810,7 +810,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>👥 Voters Directory</h2>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '4px 12px', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
-              {voters.length + 1} registered
+              {voters.length} registered
             </span>
           </div>
 
@@ -837,17 +837,6 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                 </tr>
               </thead>
               <tbody>
-                {/* Admin Row */}
-                <tr style={{ background: 'rgba(245,158,11,0.06)' }}>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>0</td>
-                  <td><span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#f59e0b' }}>ADM-9999</span></td>
-                  <td><strong>System Administrator</strong></td>
-                  <td style={{ color: 'var(--text-muted)' }}>admin@votepulse.org</td>
-                  <td style={{ color: 'var(--text-muted)' }}>—</td>
-                  <td style={{ color: 'var(--text-muted)' }}>2026-08-01</td>
-                  <td><span style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>ADMIN</span></td>
-                  <td><span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700 }}>Protected</span></td>
-                </tr>
                 {filteredVoters.length === 0 && !voterSearch ? (
                   <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No voters registered yet.</td></tr>
                 ) : filteredVoters.length === 0 ? (
