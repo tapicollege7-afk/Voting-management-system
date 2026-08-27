@@ -357,14 +357,20 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   };
 
   // ─── Create Candidate ─────────────────────────────────────────────────────
+  const saveLocal = (elecs, cands, vtrs) => {
+    if (elecs) localStorage.setItem('votepulse_admin_elections', JSON.stringify(elecs));
+    if (cands) localStorage.setItem('votepulse_admin_candidates', JSON.stringify(cands));
+    if (vtrs) localStorage.setItem('votepulse_admin_voters', JSON.stringify(vtrs));
+  };
+
   const handleCreateCandidate = async (e) => {
     e.preventDefault();
     const targetId = candElectionId || (elections.length > 0 ? elections[0].id : '');
     const newCand = {
       id: candId || 'CAND-' + Date.now(),
       election_id: targetId, name: candName,
-      department: candParty, party: candParty,
-      manifesto: candManifesto,
+      department: candParty || 'General', party: candParty || 'General',
+      manifesto: candManifesto || '',
       photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(candName)}&background=6366f1&color=fff&size=300`,
       vote_count: 0,
     };

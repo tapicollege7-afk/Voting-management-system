@@ -238,11 +238,12 @@ export default function VoterPortal({ user, setUser }) {
 
   const loadCandidates = async (elecId) => {
     try {
-      const res = await fetch(`/api/candidates?election_id=${elecId}`);
+      const res = await fetch(`/api/candidates?election_id=${elecId || ''}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.candidates) {
-          setCandidates(data.candidates);
+        if (data.success && data.candidates && data.candidates.length > 0) {
+          const matched = elecId ? data.candidates.filter(c => !c.election_id || c.election_id === elecId) : data.candidates;
+          setCandidates(matched.length > 0 ? matched : data.candidates);
           return;
         }
       }
@@ -252,7 +253,8 @@ export default function VoterPortal({ user, setUser }) {
     if (local) {
       try {
         const arr = JSON.parse(local);
-        setCandidates(arr.filter(c => c.election_id === elecId));
+        const matched = elecId ? arr.filter(c => !c.election_id || c.election_id === elecId) : arr;
+        setCandidates(matched.length > 0 ? matched : arr);
         return;
       } catch (e) {}
     }
