@@ -1060,10 +1060,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
               <button onClick={() => setShowCreateElectionModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
             <form onSubmit={handleCreateElection}>
-              <div className="form-group">
-                <label className="form-label">Election ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(auto-generated if empty)</span></label>
-                <input className="form-input" type="text" placeholder="ELEC-2026-01" value={elecId} onChange={e => setElecId(e.target.value)} />
-              </div>
+
               <div className="form-group">
                 <label className="form-label">Election Title *</label>
                 <input className="form-input" type="text" placeholder="Student Council Election 2026" value={elecTitle} onChange={e => setElecTitle(e.target.value)} required />
@@ -1115,10 +1112,7 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
                     {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Candidate ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-                  <input className="form-input" type="text" placeholder="CAND-101" value={candId} onChange={e => setCandId(e.target.value)} />
-                </div>
+
                 <div className="form-group">
                   <label className="form-label">Full Name *</label>
                   <input className="form-input" type="text" placeholder="Rahul Sharma" value={candName} onChange={e => setCandName(e.target.value)} required />
