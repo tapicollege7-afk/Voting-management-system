@@ -300,9 +300,9 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   }, [selectedResultElectionId]);
 
   const saveLocal = (el, ca, vo) => {
-    localStorage.setItem('votepulse_admin_elections', JSON.stringify(el));
-    localStorage.setItem('votepulse_admin_candidates', JSON.stringify(ca));
-    localStorage.setItem('votepulse_admin_voters', JSON.stringify(vo));
+    if (el !== undefined) localStorage.setItem('votepulse_admin_elections', JSON.stringify(el));
+    if (ca !== undefined) localStorage.setItem('votepulse_admin_candidates', JSON.stringify(ca));
+    if (vo !== undefined) localStorage.setItem('votepulse_admin_voters', JSON.stringify(vo));
   };
 
   // ─── Create Election ──────────────────────────────────────────────────────
@@ -357,12 +357,6 @@ export default function AdminConsole({ adminUser, setAdminUser }) {
   };
 
   // ─── Create Candidate ─────────────────────────────────────────────────────
-  const saveLocal = (elecs, cands, vtrs) => {
-    if (elecs) localStorage.setItem('votepulse_admin_elections', JSON.stringify(elecs));
-    if (cands) localStorage.setItem('votepulse_admin_candidates', JSON.stringify(cands));
-    if (vtrs) localStorage.setItem('votepulse_admin_voters', JSON.stringify(vtrs));
-  };
-
   const handleCreateCandidate = async (e) => {
     e.preventDefault();
     const targetId = candElectionId || (elections.length > 0 ? elections[0].id : '');

@@ -241,20 +241,29 @@ export default function VoterPortal({ user, setUser }) {
       const res = await fetch(`/api/candidates?election_id=${elecId || ''}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.candidates && data.candidates.length > 0) {
-          const matched = elecId ? data.candidates.filter(c => !c.election_id || c.election_id === elecId) : data.candidates;
-          setCandidates(matched.length > 0 ? matched : data.candidates);
+        if (data.success && Array.isArray(data.candidates)) {
+          if (data.candidates.length > 0) {
+            // Server already filtered by election_id — use as-is
+            setCandidates(data.candidates);
+          } else {
+            // No candidates for this election yet
+            setCandidates([]);
+          }
           return;
         }
       }
     } catch (err) {}
 
+    // Fallback to localStorage (offline / GitHub Pages mode)
     const local = localStorage.getItem('votepulse_admin_candidates');
     if (local) {
       try {
         const arr = JSON.parse(local);
-        const matched = elecId ? arr.filter(c => !c.election_id || c.election_id === elecId) : arr;
-        setCandidates(matched.length > 0 ? matched : arr);
+        // Filter strictly by election_id if provided
+        const matched = elecId
+          ? arr.filter(c => c.election_id === elecId)
+          : arr;
+        setCandidates(matched);
         return;
       } catch (e) {}
     }

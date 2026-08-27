@@ -233,11 +233,8 @@ app.get('/api/candidates', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const { election_id } = req.query;
-    let candidates = await db.getCandidates(election_id);
-    if ((!candidates || candidates.length === 0) && election_id) {
-      candidates = await db.getCandidates();
-    }
-    res.json({ success: true, candidates });
+    const candidates = await db.getCandidates(election_id || null);
+    res.json({ success: true, candidates: candidates || [] });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
