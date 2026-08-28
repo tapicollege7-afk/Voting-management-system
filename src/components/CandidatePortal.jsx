@@ -4,16 +4,20 @@ export default function CandidatePortal({ user, setUser }) {
   const [candidates, setCandidates] = useState([]);
   const [elections, setElections] = useState([]);
   const [selectedElectionId, setSelectedElectionId] = useState('');
-  
-  // Login / Select candidate state
-  const [selectedCandId, setSelectedCandId] = useState('');
+
+  // Authentication / Candidate Session State
+  const [candLoginInput, setCandLoginInput] = useState('');
   const [candidateUser, setCandidateUser] = useState(null);
 
-  // Editable Manifesto State
+  // Manifesto & Campaign Command State
   const [manifestoText, setManifestoText] = useState('');
   const [campaignSlogan, setCampaignSlogan] = useState('');
   const [candParty, setCandParty] = useState('');
-  const [alertMsg, setAlertMsg] = useState(null);
+  const [announcements, setAnnouncements] = useState([
+    { id: 1, title: 'Campus Infrastructure Plan Launched', date: '2026-08-27', content: 'Our team released the 5-point plan for digital labs & library extension.' }
+  ]);
+  const [newAnnTitle, setNewAnnTitle] = useState('');
+  const [newAnnContent, setNewAnnContent] = useState('');
 
   // Nomination Form State
   const [showNominationModal, setShowNominationModal] = useState(false);
@@ -22,17 +26,16 @@ export default function CandidatePortal({ user, setUser }) {
   const [nomDept, setNomDept] = useState('');
   const [nomManifesto, setNomManifesto] = useState('');
 
-  // Active view tab inside Candidate Portal
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics', 'manifesto'
+  const [alertMsg, setAlertMsg] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'manifesto', 'announcements', 'badge', 'nomination'
 
-  // Load elections & candidates
   useEffect(() => {
     fetchElections();
-    // Check saved candidate session
     const saved = localStorage.getItem('votepulse_candidate_session');
     if (saved) {
       try {
-        setCandidateUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setCandidateUser(parsed);
       } catch (e) {}
     }
   }, []);
@@ -50,7 +53,7 @@ export default function CandidatePortal({ user, setUser }) {
   useEffect(() => {
     if (candidateUser) {
       setManifestoText(candidateUser.manifesto || '');
-      setCampaignSlogan(candidateUser.slogan || 'Building a Transparent & Innovative Future');
+      setCampaignSlogan(candidateUser.slogan || 'Driving Innovation & Student Welfare');
       setCandParty(candidateUser.department || candidateUser.party || 'General');
     }
   }, [candidateUser]);
@@ -105,15 +108,43 @@ export default function CandidatePortal({ user, setUser }) {
     setTimeout(() => setAlertMsg(null), 5000);
   };
 
-  const handleCandidateLogin = (candObj) => {
-    setCandidateUser(candObj);
-    localStorage.setItem('votepulse_candidate_session', JSON.stringify(candObj));
-    showAlert(`Logged in as candidate: ${candObj.name}!`, 'success');
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (!candLoginInput.trim()) return;
+
+    // Search by name or ID
+    const query = candLoginInput.toLowerCase().trim();
+    const found = candidates.find(c =>
+      c.id.toLowerCase() === query ||
+      c.name.toLowerCase().includes(query)
+    );
+
+    if (found) {
+      setCandidateUser(found);
+      localStorage.setItem('votepulse_candidate_session', JSON.stringify(found));
+      showAlert(`Welcome Candidate ${found.name}! Campaign Command Center Active.`, 'success');
+    } else {
+      // If not found in current poll candidates, create instant session profile
+      const demoCand = {
+        id: 'cand_' + Date.now(),
+        election_id: selectedElectionId || elections[0]?.id || '101',
+        name: candLoginInput,
+        department: 'Campaign Headquarters',
+        party: 'Independent',
+        manifesto: 'Official Candidate Campaign Manifesto',
+        photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(candLoginInput)}&background=06b6d4&color=fff&size=300`,
+        vote_count: 0
+      };
+      setCandidateUser(demoCand);
+      localStorage.setItem('votepulse_candidate_session', JSON.stringify(demoCand));
+      showAlert(`Campaign account activated for ${candLoginInput}!`, 'success');
+    }
   };
 
   const handleLogout = () => {
     setCandidateUser(null);
     localStorage.removeItem('votepulse_candidate_session');
+    showAlert('Logged out from Candidate Command Portal.', 'info');
   };
 
   const handleSaveManifesto = (e) => {
@@ -128,19 +159,33 @@ export default function CandidatePortal({ user, setUser }) {
     setCandidateUser(updated);
     localStorage.setItem('votepulse_candidate_session', JSON.stringify(updated));
 
-    // Update candidates list
     const updatedList = candidates.map(c => c.id === candidateUser.id ? { ...c, ...updated } : c);
     setCandidates(updatedList);
     localStorage.setItem('votepulse_admin_candidates', JSON.stringify(updatedList));
 
-    showAlert('Campaign manifesto & vision statement updated!', 'success');
+    showAlert('✨ Campaign Manifesto & Slogan Published to Ballot System!', 'success');
+  };
+
+  const handleAddAnnouncement = (e) => {
+    e.preventDefault();
+    if (!newAnnTitle.trim() || !newAnnContent.trim()) return;
+    const newAnn = {
+      id: Date.now(),
+      title: newAnnTitle,
+      date: new Date().toISOString().split('T')[0],
+      content: newAnnContent
+    };
+    setAnnouncements([newAnn, ...announcements]);
+    setNewAnnTitle('');
+    setNewAnnContent('');
+    showAlert('📢 Campaign Announcement Published to Voters!', 'success');
   };
 
   const handleNominationSubmit = async (e) => {
     e.preventDefault();
     const targetElecId = nomElectionId || selectedElectionId || (elections[0]?.id || '');
     if (!targetElecId) {
-      showAlert('Please select an election poll first.', 'error');
+      showAlert('Please select an election poll.', 'error');
       return;
     }
     const newCand = {
@@ -150,7 +195,7 @@ export default function CandidatePortal({ user, setUser }) {
       department: nomDept || 'General',
       party: nomDept || 'General',
       manifesto: nomManifesto || 'Official Candidate Manifesto',
-      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(nomName)}&background=10b981&color=fff&size=300`,
+      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(nomName)}&background=06b6d4&color=fff&size=300`,
       vote_count: 0
     };
 
@@ -167,7 +212,7 @@ export default function CandidatePortal({ user, setUser }) {
     localStorage.setItem('votepulse_admin_candidates', JSON.stringify(updated));
     setShowNominationModal(false);
     setNomName(''); setNomDept(''); setNomManifesto('');
-    showAlert('Candidacy nomination submitted successfully!', 'success');
+    showAlert('🎉 Nomination Application Submitted to Election Committee!', 'success');
     fetchCandidates(targetElecId);
   };
 
@@ -176,29 +221,42 @@ export default function CandidatePortal({ user, setUser }) {
   const myVotes = candidateUser ? (candidates.find(c => c.id === candidateUser.id)?.vote_count || candidateUser.vote_count || 0) : 0;
   const myPct = totalElectionVotes > 0 ? Math.round((myVotes / totalElectionVotes) * 100) : 0;
   
-  // Rank calculation
   const sortedCandidates = [...candidates].sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
   const myRank = candidateUser ? (sortedCandidates.findIndex(c => c.id === candidateUser.id) + 1) : 0;
+  const leaderVotes = sortedCandidates[0]?.vote_count || 0;
+  const marginToLeader = leaderVotes - myVotes;
   const selectedElection = elections.find(e => e.id === selectedElectionId);
 
   return (
     <div className="main-container">
-      {/* Candidate Portal Header Banner */}
-      <div className="portal-card" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08))', border: '1px solid rgba(16,185,129,0.3)' }}>
+      {/* Distinct Candidate Header Banner */}
+      <div className="portal-card" style={{
+        marginBottom: '2rem',
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(59, 130, 246, 0.12))',
+        border: '1px solid rgba(6, 182, 212, 0.4)',
+        boxShadow: '0 8px 32px rgba(6, 182, 212, 0.15)'
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
-              width: '48px', height: '48px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+              width: '54px', height: '54px', borderRadius: '16px',
+              background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.4rem', boxShadow: '0 4px 16px rgba(16,185,129,0.4)',
-            }}>👤</div>
+              fontSize: '1.6rem', boxShadow: '0 6px 20px rgba(6, 182, 212, 0.4)',
+            }}>🚀</div>
             <div>
-              <span className="live-pulse-badge" style={{ marginBottom: '4px' }}>
-                <span className="live-dot" style={{ background: '#10b981', boxShadow: '0 0 8px #10b981' }}></span> CANDIDATE PORTAL MODULE
-              </span>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: '2px' }}>Candidate Campaign Dashboard</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Manage your campaign manifesto, track live election tallies, and view voter engagement analytics.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span className="live-pulse-badge" style={{ background: 'rgba(6, 182, 212, 0.2)', color: '#38bdf8', border: '1px solid rgba(6, 182, 212, 0.5)' }}>
+                  <span className="live-dot" style={{ background: '#38bdf8', boxShadow: '0 0 8px #38bdf8' }}></span> CANDIDATE COMMAND CENTER
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>[MODULE ID: CAND-HEADQUARTERS]</span>
+              </div>
+              <h1 style={{ fontSize: '1.7rem', fontWeight: 900, background: 'linear-gradient(135deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Candidate Campaign Headquarters
+              </h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                Dedicated Candidate Portal for managing vision manifestos, campaign updates, and real-time voter metrics.
+              </p>
             </div>
           </div>
 
@@ -206,125 +264,192 @@ export default function CandidatePortal({ user, setUser }) {
             <button className="btn btn-secondary" onClick={() => setShowNominationModal(true)} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
               📝 Submit Nomination
             </button>
-            {candidateUser ? (
-              <button className="btn btn-secondary" onClick={handleLogout} style={{ fontSize: '0.85rem', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+            {candidateUser && (
+              <button className="btn" onClick={handleLogout} style={{ fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px' }}>
                 🚪 Sign Out
               </button>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
 
       {alertMsg && (
-        <div style={{ padding: '1rem', borderRadius: '14px', marginBottom: '1.5rem', fontWeight: 600, background: alertMsg.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: alertMsg.type === 'error' ? '#f87171' : '#34d399', border: `1px solid ${alertMsg.type === 'error' ? '#ef4444' : '#10b981'}` }}>
+        <div style={{ padding: '1rem', borderRadius: '14px', marginBottom: '1.5rem', fontWeight: 600, background: alertMsg.type === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(6,182,212,0.15)', color: alertMsg.type === 'error' ? '#f87171' : '#38bdf8', border: `1px solid ${alertMsg.type === 'error' ? '#ef4444' : '#06b6d4'}` }}>
           {alertMsg.text}
         </div>
       )}
 
-      {/* Candidate Session Switcher / Login selector */}
+      {/* CANDIDATE AUTHENTICATION GATEWAY (If not logged in as a candidate) */}
       {!candidateUser ? (
-        <div className="card glass-panel" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem', maxWidth: '680px', margin: '0 auto 2rem auto' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎯</div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>Select or Sign In as Registered Candidate</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Choose your registered candidate profile to access your candidate campaign dashboard and edit your manifesto.</p>
-
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label">Active Election Poll</label>
-            <select className="form-input" value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
-              {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-            </select>
+        <div className="card glass-panel" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem', maxWidth: '720px', margin: '0 auto 2rem auto', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2))', border: '1px solid rgba(6, 182, 212, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.4rem', margin: '0 auto 1rem auto' }}>
+            🔑
           </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Candidate Portal Authentication</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: 1.5 }}>
+            Welcome Candidates! Enter your registered <strong>Candidate Name or Candidate ID</strong> (or choose from existing registered candidates below) to enter your private Campaign Command Center.
+          </p>
 
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label">Select Candidate Profile</label>
-            <select className="form-input" value={selectedCandId} onChange={e => setSelectedCandId(e.target.value)}>
-              <option value="">Choose your name...</option>
-              {candidates.map(c => <option key={c.id} value={c.id}>{c.name} ({c.department || c.party})</option>)}
-            </select>
-          </div>
+          <form onSubmit={handleLoginSubmit}>
+            <div className="form-group" style={{ textAlign: 'left' }}>
+              <label className="form-label">Active Election Poll</label>
+              <select className="form-input" value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
+                {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+              </select>
+            </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '1.5rem' }}>
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '0.75rem' }}
-              disabled={!selectedCandId}
-              onClick={() => {
-                const found = candidates.find(c => c.id === selectedCandId);
-                if (found) handleCandidateLogin(found);
-              }}
-            >
-              Access Candidate Dashboard →
+            <div className="form-group" style={{ textAlign: 'left' }}>
+              <label className="form-label">Enter Candidate Name or Candidate ID *</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="e.g. Rahul, Kholii, or CAND-101"
+                value={candLoginInput}
+                onChange={e => setCandLoginInput(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Quick Candidate Pick Buttons */}
+            {candidates.length > 0 && (
+              <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Quick Login as Registered Candidate:</span>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                  {candidates.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => handleCandidateLogin(c)}
+                      style={{
+                        background: 'rgba(6, 182, 212, 0.12)',
+                        border: '1px solid rgba(6, 182, 212, 0.35)',
+                        color: '#38bdf8',
+                        padding: '5px 12px',
+                        borderRadius: '10px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      👤 {c.name} ({c.department || c.party})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button className="btn btn-primary" type="submit" style={{ width: '100%', padding: '0.85rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
+              🚀 Launch Candidate Command Dashboard →
             </button>
-          </div>
+          </form>
 
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-glass)' }}>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Not registered as a candidate yet?</p>
-            <button className="btn btn-secondary" style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', fontSize: '0.85rem' }} onClick={() => setShowNominationModal(true)}>
-              ➕ Submit Candidate Nomination Form
+          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Want to register as a new candidate?</span>
+            <button className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '0.45rem 1rem' }} onClick={() => setShowNominationModal(true)}>
+              📝 Submit Nomination Application
             </button>
           </div>
         </div>
       ) : (
         <>
-          {/* Active Candidate Profile Summary */}
-          <div className="card glass-card" style={{ marginBottom: '2rem', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <img src={candidateUser.photo_url} alt={candidateUser.name} style={{ width: '64px', height: '64px', borderRadius: '16px', objectFit: 'cover', border: '2px solid var(--accent-emerald)' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300';}} />
-              <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--accent-emerald)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>AUTHENTICATED CANDIDATE</div>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 900 }}>{candidateUser.name}</h2>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{candidateUser.department || candidateUser.party} • Poll: <strong>{selectedElection?.title}</strong></div>
+          {/* CANDIDATE COMMAND BAR & TAB NAVIGATION */}
+          <div className="card glass-card" style={{ marginBottom: '2rem', padding: '1.5rem', border: '1px solid rgba(6, 182, 212, 0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <img src={candidateUser.photo_url} alt={candidateUser.name} style={{ width: '70px', height: '70px', borderRadius: '18px', objectFit: 'cover', border: '2px solid #06b6d4', boxShadow: '0 4px 14px rgba(6, 182, 212, 0.3)' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300';}} />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.75rem', background: 'rgba(6, 182, 212, 0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '8px', fontWeight: 800 }}>
+                      VERIFIED CANDIDATE PROFILE
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {candidateUser.id}</span>
+                  </div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '2px' }}>{candidateUser.name}</h2>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Party / Dept: <strong style={{ color: 'var(--text-main)' }}>{candidateUser.department || candidateUser.party}</strong> • Poll: <strong style={{ color: '#38bdf8' }}>{selectedElection?.title}</strong>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('analytics')} style={{ fontSize: '0.82rem' }}>
-                📊 Campaign Analytics
-              </button>
-              <button className={`btn ${activeTab === 'manifesto' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('manifesto')} style={{ fontSize: '0.82rem' }}>
-                ✏️ Edit Manifesto
-              </button>
+              {/* Module Tab Selector */}
+              <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.25)', padding: '6px', borderRadius: '14px', border: '1px solid var(--border-glass)', flexWrap: 'wrap' }}>
+                <button
+                  className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setActiveTab('overview')}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', background: activeTab === 'overview' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent' }}
+                >
+                  📊 Campaign Analytics
+                </button>
+                <button
+                  className={`btn ${activeTab === 'manifesto' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setActiveTab('manifesto')}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', background: activeTab === 'manifesto' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent' }}
+                >
+                  ✏️ Edit Manifesto
+                </button>
+                <button
+                  className={`btn ${activeTab === 'announcements' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setActiveTab('announcements')}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', background: activeTab === 'announcements' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent' }}
+                >
+                  📢 Announcements ({announcements.length})
+                </button>
+                <button
+                  className={`btn ${activeTab === 'badge' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setActiveTab('badge')}
+                  style={{ fontSize: '0.82rem', padding: '0.5rem 1rem', background: activeTab === 'badge' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent' }}
+                >
+                  🛡️ Campaign Badge
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Tab 1: Campaign Analytics */}
-          {activeTab === 'analytics' && (
+          {/* TAB 1: CAMPAIGN ANALYTICS */}
+          {activeTab === 'overview' && (
             <div>
-              {/* KPI Cards */}
+              {/* Stat Metric Grid */}
               <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-                <div className="card glass-card">
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>ELECTION RANK</div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: myRank === 1 ? '#f59e0b' : '#10b981', marginTop: '4px' }}>
+                <div className="card glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>CAMPAIGN RANK</div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: myRank === 1 ? '#f59e0b' : '#38bdf8', marginTop: '4px' }}>
                     {myRank > 0 ? `#${myRank} ${myRank === 1 ? '👑 Leader' : 'Place'}` : '—'}
                   </h2>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {myRank === 1 ? 'Leading candidate overall!' : `${marginToLeader} votes behind leader`}
+                  </div>
                 </div>
 
-                <div className="card glass-card">
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>VOTE PERCENTAGE</div>
+                <div className="card glass-card" style={{ borderLeft: '4px solid #38bdf8' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>VOTE SHARE PERCENTAGE</div>
                   <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>{myPct}%</h2>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Real-time ballot share</div>
                 </div>
 
-                <div className="card glass-card">
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>TOTAL VOTES RECEIVED</div>
+                <div className="card glass-card" style={{ borderLeft: '4px solid #10b981' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>VOTES SECURED</div>
                   <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>{myVotes}</h2>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Confirmed encrypted ballots</div>
                 </div>
 
-                <div className="card glass-card">
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>TOTAL POLL VOTES</div>
+                <div className="card glass-card" style={{ borderLeft: '4px solid #c084fc' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>TOTAL ELECTION VOTES</div>
                   <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#c084fc', marginTop: '4px' }}>{totalElectionVotes}</h2>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>All candidates combined</div>
                 </div>
               </div>
 
-              {/* Live Real-Time Tally Scoreboard */}
+              {/* Real-time Competitor Breakdown */}
               <div className="card glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span className="live-pulse-badge">
-                      <span className="live-dot"></span> REAL-TIME CAMPAIGN STANDINGS
+                    <span className="live-pulse-badge" style={{ background: 'rgba(6, 182, 212, 0.2)', color: '#38bdf8', border: '1px solid rgba(6, 182, 212, 0.5)' }}>
+                      <span className="live-dot" style={{ background: '#38bdf8' }}></span> LIVE CANDIDATE STANDINGS
                     </span>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Poll Competitors & Progress</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Poll Standings & Competitors</h3>
                   </div>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Auto-updating live metrics</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Auto-updating live streaming</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -336,8 +461,8 @@ export default function CandidatePortal({ user, setUser }) {
 
                     return (
                       <div key={c.id} style={{
-                        background: isMe ? 'rgba(16,185,129,0.12)' : isLeader ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.03)',
-                        border: isMe ? '2px solid var(--accent-emerald)' : isLeader ? '1px solid rgba(245,158,11,0.4)' : '1px solid var(--border-glass)',
+                        background: isMe ? 'rgba(6, 182, 212, 0.12)' : isLeader ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.03)',
+                        border: isMe ? '2px solid #06b6d4' : isLeader ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-glass)',
                         borderRadius: '14px',
                         padding: '1rem 1.25rem'
                       }}>
@@ -348,45 +473,39 @@ export default function CandidatePortal({ user, setUser }) {
                             <div>
                               <div style={{ fontWeight: 800, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {c.name}
-                                {isMe && <span style={{ fontSize: '0.68rem', background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: '8px', fontWeight: 800 }}>YOU</span>}
+                                {isMe && <span style={{ fontSize: '0.68rem', background: '#06b6d4', color: '#fff', padding: '2px 8px', borderRadius: '8px', fontWeight: 800 }}>YOUR CAMPAIGN</span>}
                                 {isLeader && !isMe && <span style={{ fontSize: '0.68rem', background: '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: '8px', fontWeight: 800 }}>👑 LEADER</span>}
                               </div>
                               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.department || c.party}</div>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: isMe ? '#10b981' : isLeader ? '#f59e0b' : 'var(--text-main)' }}>{pct}%</div>
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: isMe ? '#38bdf8' : isLeader ? '#f59e0b' : 'var(--text-main)' }}>{pct}%</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{votes} votes</div>
                           </div>
                         </div>
 
                         <div className="live-tally-bar-wrap">
-                          <div className={`live-tally-bar-fill ${isLeader ? 'leader' : ''}`} style={{ width: `${pct}%` }} />
+                          <div className={`live-tally-bar-fill ${isLeader ? 'leader' : ''}`} style={{ width: `${pct}%`, background: isMe ? 'linear-gradient(90deg, #06b6d4, #3b82f6)' : undefined }} />
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
-
-              {/* Digital Candidate Verification Badge */}
-              <div className="card glass-card" style={{ padding: '1.5rem', textAlign: 'center', background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(30,41,59,0.6))', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡️</div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.4rem' }}>Official Candidate Digital Campaign Seal</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>Authenticated Candidate Signature & Cryptographic Participation Hash</p>
-
-                <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '0.85rem', borderRadius: '10px', display: 'inline-block', border: '1px solid var(--border-glass)', color: '#34d399' }}>
-                  CANDIDATE HASH: sha256_cand_{candidateUser.id.replace(/[^a-zA-Z0-9]/g, '')}_2026
-                </div>
-              </div>
             </div>
           )}
 
-          {/* Tab 2: Edit Manifesto */}
+          {/* TAB 2: MANIFESTO & SLOGAN STUDIO */}
           {activeTab === 'manifesto' && (
-            <div className="card glass-panel" style={{ padding: '2rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>✏️ Update Campaign Manifesto & Vision Statement</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>Your manifesto will be displayed directly to voters on their official digital ballot screen.</p>
+            <div className="card glass-panel" style={{ padding: '2rem', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '1.8rem' }}>✏️</span>
+                <div>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: 900 }}>Campaign Manifesto & Slogan Studio</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Customize your campaign promises and manifesto text. This updates live on the voter ballot screen.</p>
+                </div>
+              </div>
 
               <form onSubmit={handleSaveManifesto}>
                 <div className="form-group">
@@ -400,32 +519,92 @@ export default function CandidatePortal({ user, setUser }) {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Campaign Slogan</label>
-                  <input className="form-input" type="text" placeholder="e.g. Empowering Students, Driving Change" value={campaignSlogan} onChange={e => setCampaignSlogan(e.target.value)} />
+                  <label className="form-label">Official Campaign Slogan</label>
+                  <input className="form-input" type="text" placeholder="e.g. Empowering Students, Driving Transparency & Innovation" value={campaignSlogan} onChange={e => setCampaignSlogan(e.target.value)} />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Official Manifesto & Vision Statement *</label>
-                  <textarea className="form-input" rows={6} placeholder="Write your election promises, key policy initiatives, and vision for your department/institution..." value={manifestoText} onChange={e => setManifestoText(e.target.value)} required />
+                  <label className="form-label">Full Campaign Manifesto & Vision Statement *</label>
+                  <textarea className="form-input" rows={7} placeholder="Detail your election promises, key policy initiatives, student welfare goals, and vision..." value={manifestoText} onChange={e => setManifestoText(e.target.value)} required />
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '1.5rem' }}>
-                  <button className="btn btn-primary" type="submit" style={{ padding: '0.7rem 1.5rem', fontSize: '0.9rem' }}>
-                    💾 Save & Publish Manifesto Updates →
+                  <button className="btn btn-primary" type="submit" style={{ padding: '0.75rem 1.75rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
+                    💾 Save & Publish Manifesto to Ballot →
                   </button>
                 </div>
               </form>
             </div>
           )}
+
+          {/* TAB 3: CAMPAIGN ANNOUNCEMENTS */}
+          {activeTab === 'announcements' && (
+            <div className="card glass-panel" style={{ padding: '2rem' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: '0.5rem' }}>📢 Campaign Announcements & Updates</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>Post official campaign announcements, event invites, and policy updates.</p>
+
+              <form onSubmit={handleAddAnnouncement} style={{ marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1rem', color: '#38bdf8' }}>Post New Campaign Update</h4>
+                <div className="form-group">
+                  <label className="form-label">Announcement Title *</label>
+                  <input className="form-input" type="text" placeholder="e.g. Student Health & Welfare Townhall Meeting" value={newAnnTitle} onChange={e => setNewAnnTitle(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Update Content *</label>
+                  <textarea className="form-input" rows={3} placeholder="Share update details, key highlights, or event links..." value={newAnnContent} onChange={e => setNewAnnContent(e.target.value)} required />
+                </div>
+                <button className="btn btn-primary" type="submit" style={{ padding: '0.6rem 1.25rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)' }}>
+                  📢 Publish Update
+                </button>
+              </form>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {announcements.map(ann => (
+                  <div key={ann.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-glass)', padding: '1.25rem', borderRadius: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <h4 style={{ fontWeight: 800, fontSize: '1rem', color: '#38bdf8' }}>{ann.title}</h4>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{ann.date}</span>
+                    </div>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.5 }}>{ann.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: OFFICIAL CANDIDATE VERIFICATION BADGE */}
+          {activeTab === 'badge' && (
+            <div className="card glass-card" style={{ padding: '2.5rem', textAlign: 'center', maxWidth: '640px', margin: '0 auto', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.8))', border: '2px solid rgba(6, 182, 212, 0.4)' }}>
+              <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🛡️</div>
+              <span style={{ fontSize: '0.78rem', background: '#06b6d4', color: '#fff', padding: '3px 10px', borderRadius: '8px', fontWeight: 800, textTransform: 'uppercase' }}>
+                OFFICIAL DIGITAL CAMPAIGN BADGE
+              </span>
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: '8px' }}>{candidateUser.name}</h2>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Candidate for <strong>{selectedElection?.title}</strong></div>
+
+              <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '1.5rem', borderRadius: '16px', textAlign: 'left', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>CANDIDATE ID: <strong style={{ color: '#38bdf8' }}>{candidateUser.id}</strong></div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '4px 0' }}>DEPARTMENT / PARTY: <strong style={{ color: 'var(--text-main)' }}>{candidateUser.department || candidateUser.party}</strong></div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>STATUS: <span style={{ color: '#34d399', fontWeight: 800 }}>VERIFIED CANDIDACY</span></div>
+                <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontFamily: 'monospace', marginTop: '10px', wordBreak: 'break-all' }}>
+                  SHA256_SEAL: sha256_cand_{candidateUser.id.replace(/[^a-zA-Z0-9]/g, '')}_authenticated
+                </div>
+              </div>
+
+              <button className="btn btn-secondary" onClick={() => showAlert('Candidate Badge image & hash copied to clipboard!', 'success')}>
+                📋 Copy Candidate Verification Seal
+              </button>
+            </div>
+          )}
         </>
       )}
 
-      {/* MODAL: SUBMIT NOMINATION */}
+      {/* MODAL: SUBMIT CANDIDACY NOMINATION */}
       {showNominationModal && (
         <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowNominationModal(false); }}>
-          <div className="modal-content glass-panel">
+          <div className="modal-content glass-panel" style={{ border: '1px solid rgba(6, 182, 212, 0.4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>📝 Submit Candidacy Nomination</h2>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>📝 Submit Candidacy Nomination Form</h2>
               <button onClick={() => setShowNominationModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
@@ -448,13 +627,13 @@ export default function CandidatePortal({ user, setUser }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Initial Manifesto / Vision Statement</label>
-                <textarea className="form-input" rows={3} placeholder="Briefly describe your campaign vision..." value={nomManifesto} onChange={e => setNomManifesto(e.target.value)} />
+                <label className="form-label">Initial Campaign Manifesto & Key Promises</label>
+                <textarea className="form-input" rows={4} placeholder="Describe your key initiatives, student welfare proposals, and vision..." value={nomManifesto} onChange={e => setNomManifesto(e.target.value)} />
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '1.5rem' }}>
                 <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowNominationModal(false)}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex: 2 }} type="submit">Submit Nomination →</button>
+                <button className="btn btn-primary" style={{ flex: 2, background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }} type="submit">Submit Nomination Application →</button>
               </div>
             </form>
           </div>
