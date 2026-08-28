@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
 import VoterPortal from './components/VoterPortal';
+import CandidatePortal from './components/CandidatePortal';
 import AdminConsole from './components/AdminConsole';
 import BallotAuditTool from './components/BallotAuditTool';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  // Direct Routing: hash '#admin' -> admin, '#audit' -> audit, default -> voter
+  // Direct Routing: hash '#admin' -> admin, '#candidate' -> candidate, '#audit' -> audit, default -> voter
   const getInitialRoute = () => {
     const hash = window.location.hash.toLowerCase();
     if (hash.includes('admin')) return 'admin';
+    if (hash.includes('candidate')) return 'candidate';
     if (hash.includes('audit')) return 'audit';
     return 'voter';
   };
@@ -84,6 +86,7 @@ export default function App() {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash.includes('admin')) setCurrentRoute('admin');
+      else if (hash.includes('candidate')) setCurrentRoute('candidate');
       else if (hash.includes('audit')) setCurrentRoute('audit');
       else setCurrentRoute('voter');
     };
@@ -188,6 +191,10 @@ export default function App() {
             user={voterUser}
             setUser={setVoterUser}
           />
+        )}
+
+        {currentRoute === 'candidate' && (
+          <CandidatePortal />
         )}
 
         {currentRoute === 'admin' && (

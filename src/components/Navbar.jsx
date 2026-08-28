@@ -85,16 +85,71 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
             </div>
           </div>
 
-          <div className="header-nav" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {/* Reactive VOTER ACCESS Button -> Navigates to Admin Module */}
+          <div className="header-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Module Selector Navigation Pills */}
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+              <button
+                className={`nav-pill ${currentRoute === 'voter' ? 'active' : ''}`}
+                onClick={() => navigateTo('voter')}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', border: 'none', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  background: currentRoute === 'voter' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent',
+                  color: currentRoute === 'voter' ? '#ffffff' : 'var(--text-muted)'
+                }}
+              >
+                🗳️ Voter
+              </button>
+
+              <button
+                className={`nav-pill ${currentRoute === 'candidate' ? 'active' : ''}`}
+                onClick={() => navigateTo('candidate')}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', border: 'none', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  background: currentRoute === 'candidate' ? 'linear-gradient(135deg, #06b6d4, #0284c7)' : 'transparent',
+                  color: currentRoute === 'candidate' ? '#ffffff' : 'var(--text-muted)'
+                }}
+              >
+                👤 Candidate
+              </button>
+
+              <button
+                className={`nav-pill ${currentRoute === 'admin' ? 'active' : ''}`}
+                onClick={() => navigateTo('admin')}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', border: 'none', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  background: currentRoute === 'admin' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                  color: currentRoute === 'admin' ? '#ffffff' : 'var(--text-muted)'
+                }}
+              >
+                🛡️ Admin
+              </button>
+
+              <button
+                className={`nav-pill ${currentRoute === 'audit' ? 'active' : ''}`}
+                onClick={() => navigateTo('audit')}
+                style={{
+                  padding: '6px 14px', borderRadius: '8px', border: 'none', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  background: currentRoute === 'audit' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent',
+                  color: currentRoute === 'audit' ? '#ffffff' : 'var(--text-muted)'
+                }}
+              >
+                🔍 Audit
+              </button>
+            </div>
+
+            {/* Reactive VOTER ACCESS / ADMIN QUICK BUTTON */}
             <button
               className="btn-voter-access-reactive"
               onClick={handleVoterAccessClick}
               title="Click to Switch to Admin Module"
             >
               <span className="voter-access-pulse"></span>
-              <span style={{ fontSize: '0.9rem' }}>🛡️</span>
-              <span>{isRedirecting ? '⚡ SWITCHING TO ADMIN...' : 'VOTER ACCESS'}</span>
+              <span style={{ fontSize: '0.9rem' }}>⚡</span>
+              <span>{isRedirecting ? 'SWITCHING...' : 'QUICK ADMIN'}</span>
             </button>
 
             <button className="icon-btn" onClick={onOpenSettings} title="System Settings">
