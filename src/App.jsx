@@ -7,12 +7,22 @@ import BallotAuditTool from './components/BallotAuditTool';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  // Direct Routing: hash '#admin' -> admin, '#candidate' -> candidate, '#audit' -> audit, default -> voter
+  // Direct Routing Resolution: checks hash, pathname, search params, and sessionStorage
   const getInitialRoute = () => {
     const hash = window.location.hash.toLowerCase();
-    if (hash.includes('admin')) return 'admin';
-    if (hash.includes('candidate')) return 'candidate';
-    if (hash.includes('audit')) return 'audit';
+    const pathname = window.location.pathname.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    const stored = (sessionStorage.getItem('votepulse_active_route') || '').toLowerCase();
+
+    if (hash.includes('candidate') || pathname.includes('candidate') || search.includes('candidate') || stored === 'candidate') {
+      return 'candidate';
+    }
+    if (hash.includes('admin') || pathname.includes('admin') || search.includes('admin') || stored === 'admin') {
+      return 'admin';
+    }
+    if (hash.includes('audit') || pathname.includes('audit') || search.includes('audit') || stored === 'audit') {
+      return 'audit';
+    }
     return 'voter';
   };
 
@@ -81,14 +91,26 @@ export default function App() {
     sessionStorage.setItem('pwa_banner_dismissed', '1');
   };
 
-  // Sync hash changes (e.g. back/forward button or URL change)
+  // Sync hash and pathname changes
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash.includes('admin')) setCurrentRoute('admin');
-      else if (hash.includes('candidate')) setCurrentRoute('candidate');
-      else if (hash.includes('audit')) setCurrentRoute('audit');
-      else setCurrentRoute('voter');
+      const pathname = window.location.pathname.toLowerCase();
+      const search = window.location.search.toLowerCase();
+
+      if (hash.includes('candidate') || pathname.includes('candidate') || search.includes('candidate')) {
+        setCurrentRoute('candidate');
+        sessionStorage.setItem('votepulse_active_route', 'candidate');
+      } else if (hash.includes('admin') || pathname.includes('admin') || search.includes('admin')) {
+        setCurrentRoute('admin');
+        sessionStorage.setItem('votepulse_active_route', 'admin');
+      } else if (hash.includes('audit') || pathname.includes('audit') || search.includes('audit')) {
+        setCurrentRoute('audit');
+        sessionStorage.setItem('votepulse_active_route', 'audit');
+      } else {
+        setCurrentRoute('voter');
+        sessionStorage.setItem('votepulse_active_route', 'voter');
+      }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -96,6 +118,7 @@ export default function App() {
 
   // Navigate between modules cleanly
   const navigateTo = (newRoute) => {
+    sessionStorage.setItem('votepulse_active_route', newRoute);
     if (newRoute === 'voter') {
       window.location.hash = '';
     } else {
