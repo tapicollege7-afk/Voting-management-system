@@ -5,29 +5,33 @@ export default function CandidatePortal({ user, setUser }) {
   const [elections, setElections] = useState([]);
   const [selectedElectionId, setSelectedElectionId] = useState('');
 
-  // Authentication / Candidate Session State
-  const [candLoginInput, setCandLoginInput] = useState('');
+  // Candidate Authentication State
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [candKeyInput, setCandKeyInput] = useState('');
+  const [candPasswordInput, setCandPasswordInput] = useState('');
   const [candidateUser, setCandidateUser] = useState(null);
+
+  // Registration Form State
+  const [regName, setRegName] = useState('');
+  const [regKey, setRegKey] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regElectionId, setRegElectionId] = useState('');
+  const [regDept, setRegDept] = useState('');
+  const [regManifesto, setRegManifesto] = useState('');
 
   // Manifesto & Campaign Command State
   const [manifestoText, setManifestoText] = useState('');
   const [campaignSlogan, setCampaignSlogan] = useState('');
   const [candParty, setCandParty] = useState('');
   const [announcements, setAnnouncements] = useState([
-    { id: 1, title: 'Campus Infrastructure Plan Launched', date: '2026-08-27', content: 'Our team released the 5-point plan for digital labs & library extension.' }
+    { id: 1, title: 'Campus Infrastructure Plan Launched', date: '2026-08-28', content: 'Our team released the 5-point plan for digital labs & library extension.' }
   ]);
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
 
-  // Nomination Form State
-  const [showNominationModal, setShowNominationModal] = useState(false);
-  const [nomName, setNomName] = useState('');
-  const [nomElectionId, setNomElectionId] = useState('');
-  const [nomDept, setNomDept] = useState('');
-  const [nomManifesto, setNomManifesto] = useState('');
-
   const [alertMsg, setAlertMsg] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'manifesto', 'announcements', 'badge', 'nomination'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'manifesto', 'announcements', 'badge'
 
   useEffect(() => {
     fetchElections();
@@ -110,10 +114,9 @@ export default function CandidatePortal({ user, setUser }) {
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    if (!candLoginInput.trim()) return;
+    if (!candKeyInput.trim()) return;
 
-    // Search by name or ID
-    const query = candLoginInput.toLowerCase().trim();
+    const query = candKeyInput.toLowerCase().trim();
     const found = candidates.find(c =>
       c.id.toLowerCase() === query ||
       c.name.toLowerCase().includes(query)
@@ -124,27 +127,68 @@ export default function CandidatePortal({ user, setUser }) {
       localStorage.setItem('votepulse_candidate_session', JSON.stringify(found));
       showAlert(`Welcome Candidate ${found.name}! Campaign Command Center Active.`, 'success');
     } else {
-      // If not found in current poll candidates, create instant session profile
-      const demoCand = {
+      const newCand = {
         id: 'cand_' + Date.now(),
         election_id: selectedElectionId || elections[0]?.id || '101',
-        name: candLoginInput,
+        name: candKeyInput,
         department: 'Campaign Headquarters',
         party: 'Independent',
         manifesto: 'Official Candidate Campaign Manifesto',
-        photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(candLoginInput)}&background=06b6d4&color=fff&size=300`,
+        photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(candKeyInput)}&background=06b6d4&color=fff&size=300`,
         vote_count: 0
       };
-      setCandidateUser(demoCand);
-      localStorage.setItem('votepulse_candidate_session', JSON.stringify(demoCand));
-      showAlert(`Campaign account activated for ${candLoginInput}!`, 'success');
+      setCandidateUser(newCand);
+      localStorage.setItem('votepulse_candidate_session', JSON.stringify(newCand));
+      showAlert(`Candidate session initialized for ${candKeyInput}!`, 'success');
     }
+  };
+
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    const targetElecId = regElectionId || selectedElectionId || (elections[0]?.id || '');
+    if (!targetElecId) {
+      showAlert('Please select an election poll.', 'error');
+      return;
+    }
+
+    const candId = regKey.trim() ? regKey.trim() : 'cand_' + Date.now();
+    const newCand = {
+      id: candId,
+      election_id: targetElecId,
+      name: regName,
+      department: regDept || 'General',
+      party: regDept || 'General',
+      manifesto: regManifesto || 'Official Campaign Manifesto',
+      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(regName)}&background=06b6d4&color=fff&size=300`,
+      vote_count: 0
+    };
+
+    try {
+      await fetch('/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCand)
+      });
+    } catch (e) {}
+
+    const updated = [...candidates, newCand];
+    setCandidates(updated);
+    localStorage.setItem('votepulse_admin_candidates', JSON.stringify(updated));
+
+    // Log in automatically
+    setCandidateUser(newCand);
+    localStorage.setItem('votepulse_candidate_session', JSON.stringify(newCand));
+
+    // Reset registration form
+    setRegName(''); setRegKey(''); setRegEmail(''); setRegPassword(''); setRegDept(''); setRegManifesto('');
+    showAlert(`🎉 Candidate Registration Complete! Logged in as ${newCand.name}.`, 'success');
+    fetchCandidates(targetElecId);
   };
 
   const handleLogout = () => {
     setCandidateUser(null);
     localStorage.removeItem('votepulse_candidate_session');
-    showAlert('Logged out from Candidate Command Portal.', 'info');
+    showAlert('Signed out from Candidate Command Portal.', 'info');
   };
 
   const handleSaveManifesto = (e) => {
@@ -181,41 +225,6 @@ export default function CandidatePortal({ user, setUser }) {
     showAlert('📢 Campaign Announcement Published to Voters!', 'success');
   };
 
-  const handleNominationSubmit = async (e) => {
-    e.preventDefault();
-    const targetElecId = nomElectionId || selectedElectionId || (elections[0]?.id || '');
-    if (!targetElecId) {
-      showAlert('Please select an election poll.', 'error');
-      return;
-    }
-    const newCand = {
-      id: 'cand_' + Date.now(),
-      election_id: targetElecId,
-      name: nomName,
-      department: nomDept || 'General',
-      party: nomDept || 'General',
-      manifesto: nomManifesto || 'Official Candidate Manifesto',
-      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(nomName)}&background=06b6d4&color=fff&size=300`,
-      vote_count: 0
-    };
-
-    try {
-      await fetch('/api/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCand)
-      });
-    } catch (e) {}
-
-    const updated = [...candidates, newCand];
-    setCandidates(updated);
-    localStorage.setItem('votepulse_admin_candidates', JSON.stringify(updated));
-    setShowNominationModal(false);
-    setNomName(''); setNomDept(''); setNomManifesto('');
-    showAlert('🎉 Nomination Application Submitted to Election Committee!', 'success');
-    fetchCandidates(targetElecId);
-  };
-
   // Live Stats calculations
   const totalElectionVotes = candidates.reduce((sum, c) => sum + (c.vote_count || 0), 0);
   const myVotes = candidateUser ? (candidates.find(c => c.id === candidateUser.id)?.vote_count || candidateUser.vote_count || 0) : 0;
@@ -229,47 +238,42 @@ export default function CandidatePortal({ user, setUser }) {
 
   return (
     <div className="main-container">
-      {/* Distinct Candidate Header Banner */}
+      {/* Header Banner */}
       <div className="portal-card" style={{
         marginBottom: '2rem',
-        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(59, 130, 246, 0.12))',
-        border: '1px solid rgba(6, 182, 212, 0.4)',
-        boxShadow: '0 8px 32px rgba(6, 182, 212, 0.15)'
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.14))',
+        border: '1px solid rgba(6, 182, 212, 0.45)',
+        boxShadow: '0 8px 32px rgba(6, 182, 212, 0.18)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
-              width: '54px', height: '54px', borderRadius: '16px',
+              width: '56px', height: '56px', borderRadius: '18px',
               background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.6rem', boxShadow: '0 6px 20px rgba(6, 182, 212, 0.4)',
+              fontSize: '1.7rem', boxShadow: '0 6px 20px rgba(6, 182, 212, 0.45)',
             }}>🚀</div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <span className="live-pulse-badge" style={{ background: 'rgba(6, 182, 212, 0.2)', color: '#38bdf8', border: '1px solid rgba(6, 182, 212, 0.5)' }}>
                   <span className="live-dot" style={{ background: '#38bdf8', boxShadow: '0 0 8px #38bdf8' }}></span> CANDIDATE COMMAND CENTER
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>[MODULE ID: CAND-HEADQUARTERS]</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>[SYSTEM ROUTE: CANDIDATE PORTAL]</span>
               </div>
-              <h1 style={{ fontSize: '1.7rem', fontWeight: 900, background: 'linear-gradient(135deg, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Candidate Campaign Headquarters
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 900, background: 'linear-gradient(135deg, #38bdf8, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Candidate Authentication & Campaign Portal
               </h1>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                Dedicated Candidate Portal for managing vision manifestos, campaign updates, and real-time voter metrics.
+                Dedicated platform for candidates to log in, register nominations, edit policy manifestos, and track campaign standings.
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary" onClick={() => setShowNominationModal(true)} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              📝 Submit Nomination
+          {candidateUser && (
+            <button className="btn" onClick={handleLogout} style={{ fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px' }}>
+              🚪 Sign Out ({candidateUser.name})
             </button>
-            {candidateUser && (
-              <button className="btn" onClick={handleLogout} style={{ fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px' }}>
-                🚪 Sign Out
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -279,81 +283,168 @@ export default function CandidatePortal({ user, setUser }) {
         </div>
       )}
 
-      {/* CANDIDATE AUTHENTICATION GATEWAY (If not logged in as a candidate) */}
+      {/* CANDIDATE AUTHENTICATION SYSTEM (LOGIN / SIGN UP TABS) */}
       {!candidateUser ? (
-        <div className="card glass-panel" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem', maxWidth: '720px', margin: '0 auto 2rem auto', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
-          <div style={{ width: '70px', height: '70px', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2))', border: '1px solid rgba(6, 182, 212, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.4rem', margin: '0 auto 1rem auto' }}>
-            🔑
+        <div className="card glass-panel" style={{ padding: '2.5rem', marginBottom: '2rem', maxWidth: '720px', margin: '0 auto 2rem auto', border: '1px solid rgba(6, 182, 212, 0.35)' }}>
+          {/* Dual Auth Switcher Pills */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '16px', marginBottom: '2rem', border: '1px solid var(--border-glass)' }}>
+            <button
+              type="button"
+              onClick={() => setAuthMode('login')}
+              style={{
+                flex: 1, padding: '0.7rem', borderRadius: '12px', border: 'none', fontWeight: 800, fontSize: '0.9rem',
+                cursor: 'pointer', transition: 'all 0.25s ease',
+                background: authMode === 'login' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent',
+                color: authMode === 'login' ? '#ffffff' : 'var(--text-muted)'
+              }}
+            >
+              🔐 Candidate Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode('register')}
+              style={{
+                flex: 1, padding: '0.7rem', borderRadius: '12px', border: 'none', fontWeight: 800, fontSize: '0.9rem',
+                cursor: 'pointer', transition: 'all 0.25s ease',
+                background: authMode === 'register' ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent',
+                color: authMode === 'register' ? '#ffffff' : 'var(--text-muted)'
+              }}
+            >
+              📝 Register / Nominate Candidate
+            </button>
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Candidate Portal Authentication</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: 1.5 }}>
-            Welcome Candidates! Enter your registered <strong>Candidate Name or Candidate ID</strong> (or choose from existing registered candidates below) to enter your private Campaign Command Center.
-          </p>
 
-          <form onSubmit={handleLoginSubmit}>
-            <div className="form-group" style={{ textAlign: 'left' }}>
-              <label className="form-label">Active Election Poll</label>
-              <select className="form-input" value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
-                {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-              </select>
-            </div>
+          {/* MODE 1: CANDIDATE LOGIN FORM */}
+          {authMode === 'login' ? (
+            <div>
+              <div style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: '#38bdf8', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>CANDIDATE SIGN IN</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '0.5rem' }}>Access Your Campaign Dashboard</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>Enter your registered Candidate Name or Candidate ID Key to access your command center.</p>
 
-            <div className="form-group" style={{ textAlign: 'left' }}>
-              <label className="form-label">Enter Candidate Name or Candidate ID *</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="e.g. Rahul, Kholii, or CAND-101"
-                value={candLoginInput}
-                onChange={e => setCandLoginInput(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Quick Candidate Pick Buttons */}
-            {candidates.length > 0 && (
-              <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Quick Login as Registered Candidate:</span>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                  {candidates.map(c => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => handleCandidateLogin(c)}
-                      style={{
-                        background: 'rgba(6, 182, 212, 0.12)',
-                        border: '1px solid rgba(6, 182, 212, 0.35)',
-                        color: '#38bdf8',
-                        padding: '5px 12px',
-                        borderRadius: '10px',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      👤 {c.name} ({c.department || c.party})
-                    </button>
-                  ))}
+              <form onSubmit={handleLoginSubmit}>
+                <div className="form-group">
+                  <label className="form-label">Active Election Poll</label>
+                  <select className="form-input" value={selectedElectionId} onChange={e => setSelectedElectionId(e.target.value)}>
+                    {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+                  </select>
                 </div>
-              </div>
-            )}
 
-            <button className="btn btn-primary" type="submit" style={{ width: '100%', padding: '0.85rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
-              🚀 Launch Candidate Command Dashboard →
-            </button>
-          </form>
+                <div className="form-group">
+                  <label className="form-label">Candidate Key / Name *</label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    placeholder="e.g. Rahul, Kholii, or CAND-101"
+                    value={candKeyInput}
+                    onChange={e => setCandKeyInput(e.target.value)}
+                    required
+                  />
+                </div>
 
-          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Want to register as a new candidate?</span>
-            <button className="btn btn-secondary" style={{ fontSize: '0.82rem', padding: '0.45rem 1rem' }} onClick={() => setShowNominationModal(true)}>
-              📝 Submit Nomination Application
-            </button>
-          </div>
+                <div className="form-group">
+                  <label className="form-label">Candidate Passcode <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="••••••••"
+                    value={candPasswordInput}
+                    onChange={e => setCandPasswordInput(e.target.value)}
+                  />
+                </div>
+
+                {/* Registered Candidates Quick Select List */}
+                {candidates.length > 0 && (
+                  <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Quick Login as Candidate:</span>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {candidates.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setCandidateUser(c);
+                            localStorage.setItem('votepulse_candidate_session', JSON.stringify(c));
+                            showAlert(`Logged in as Candidate ${c.name}!`, 'success');
+                          }}
+                          style={{
+                            background: 'rgba(6, 182, 212, 0.12)',
+                            border: '1px solid rgba(6, 182, 212, 0.35)',
+                            color: '#38bdf8',
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          👤 {c.name} ({c.department || c.party})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button className="btn btn-primary" type="submit" style={{ width: '100%', padding: '0.85rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
+                  🚀 Sign In to Candidate Command Center →
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* MODE 2: CANDIDATE REGISTRATION FORM */
+            <div>
+              <div style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: '#38bdf8', fontWeight: 800, letterSpacing: '1px', marginBottom: '4px' }}>NEW CANDIDATE REGISTRATION</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, marginBottom: '0.5rem' }}>Register Candidacy Nomination</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>Create a candidate account to run for an election poll and publish your campaign manifesto.</p>
+
+              <form onSubmit={handleRegistrationSubmit}>
+                <div className="form-group">
+                  <label className="form-label">Target Election Poll *</label>
+                  <select className="form-input" value={regElectionId || selectedElectionId} onChange={e => setRegElectionId(e.target.value)} required>
+                    {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Full Candidate Name *</label>
+                  <input className="form-input" type="text" placeholder="e.g. Priya Sharma" value={regName} onChange={e => setRegName(e.target.value)} required />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Candidate Access Key / ID <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(auto-generated if blank)</span></label>
+                  <input className="form-input" type="text" placeholder="CAND-KEY-2026" value={regKey} onChange={e => setRegKey(e.target.value)} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email Address *</label>
+                  <input className="form-input" type="email" placeholder="candidate@institution.edu" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Password *</label>
+                  <input className="form-input" type="password" placeholder="Create a secure password" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Department / Party Affiliation</label>
+                  <input className="form-input" type="text" placeholder="e.g. Computer Science Dept." value={regDept} onChange={e => setRegDept(e.target.value)} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Initial Manifesto & Vision Statement</label>
+                  <textarea className="form-input" rows={4} placeholder="Describe your key campaign initiatives, promises, and vision..." value={regManifesto} onChange={e => setRegManifesto(e.target.value)} />
+                </div>
+
+                <button className="btn btn-primary" type="submit" style={{ width: '100%', padding: '0.85rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
+                  🎉 Register & Launch Campaign Dashboard →
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       ) : (
         <>
-          {/* CANDIDATE COMMAND BAR & TAB NAVIGATION */}
+          {/* AUTHENTICATED CANDIDATE DASHBOARD */}
           <div className="card glass-card" style={{ marginBottom: '2rem', padding: '1.5rem', border: '1px solid rgba(6, 182, 212, 0.35)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -409,7 +500,6 @@ export default function CandidatePortal({ user, setUser }) {
           {/* TAB 1: CAMPAIGN ANALYTICS */}
           {activeTab === 'overview' && (
             <div>
-              {/* Stat Metric Grid */}
               <div className="stats-grid" style={{ marginBottom: '2rem' }}>
                 <div className="card glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>CAMPAIGN RANK</div>
@@ -496,7 +586,7 @@ export default function CandidatePortal({ user, setUser }) {
             </div>
           )}
 
-          {/* TAB 2: MANIFESTO & SLOGAN STUDIO */}
+          {/* TAB 2: MANIFESTO STUDIO */}
           {activeTab === 'manifesto' && (
             <div className="card glass-panel" style={{ padding: '2rem', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
@@ -572,7 +662,7 @@ export default function CandidatePortal({ user, setUser }) {
             </div>
           )}
 
-          {/* TAB 4: OFFICIAL CANDIDATE VERIFICATION BADGE */}
+          {/* TAB 4: OFFICIAL BADGE */}
           {activeTab === 'badge' && (
             <div className="card glass-card" style={{ padding: '2.5rem', textAlign: 'center', maxWidth: '640px', margin: '0 auto', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.8))', border: '2px solid rgba(6, 182, 212, 0.4)' }}>
               <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🛡️</div>
@@ -597,47 +687,6 @@ export default function CandidatePortal({ user, setUser }) {
             </div>
           )}
         </>
-      )}
-
-      {/* MODAL: SUBMIT CANDIDACY NOMINATION */}
-      {showNominationModal && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowNominationModal(false); }}>
-          <div className="modal-content glass-panel" style={{ border: '1px solid rgba(6, 182, 212, 0.4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8' }}>📝 Submit Candidacy Nomination Form</h2>
-              <button onClick={() => setShowNominationModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleNominationSubmit}>
-              <div className="form-group">
-                <label className="form-label">Target Election Poll *</label>
-                <select className="form-input" value={nomElectionId || selectedElectionId} onChange={e => setNomElectionId(e.target.value)} required>
-                  {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Full Candidate Name *</label>
-                <input className="form-input" type="text" placeholder="e.g. Priya Sharma" value={nomName} onChange={e => setNomName(e.target.value)} required />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Department / Party</label>
-                <input className="form-input" type="text" placeholder="e.g. Computer Science Dept." value={nomDept} onChange={e => setNomDept(e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Initial Campaign Manifesto & Key Promises</label>
-                <textarea className="form-input" rows={4} placeholder="Describe your key initiatives, student welfare proposals, and vision..." value={nomManifesto} onChange={e => setNomManifesto(e.target.value)} />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1.5rem' }}>
-                <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowNominationModal(false)}>Cancel</button>
-                <button className="btn btn-primary" style={{ flex: 2, background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }} type="submit">Submit Nomination Application →</button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
     </div>
   );

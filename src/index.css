@@ -1,22 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap');
 
 :root {
-  /* Color Palette - Rich Imperial Gold & Midnight Emerald Glassmorphism Theme */
-  --bg-dark: #050814;
-  --bg-card: rgba(15, 23, 42, 0.65);
-  --bg-card-hover: rgba(30, 41, 59, 0.85);
-  --border-glass: rgba(255, 255, 255, 0.12);
-  --border-glass-glow: rgba(245, 158, 11, 0.45);
+  /* Color Palette - Ultra-Premium Cosmic Sapphire & Electric Cyan Glassmorphism Theme */
+  --bg-dark: #030712;
+  --bg-card: rgba(15, 23, 42, 0.72);
+  --bg-card-hover: rgba(30, 41, 59, 0.9);
+  --border-glass: rgba(255, 255, 255, 0.14);
+  --border-glass-glow: rgba(56, 189, 248, 0.5);
 
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   
-  --primary: #10b981;
-  --primary-hover: #059669;
-  --primary-glow: rgba(16, 185, 129, 0.35);
+  --primary: #38bdf8;
+  --primary-hover: #0284c7;
+  --primary-glow: rgba(56, 189, 248, 0.4);
 
   --accent-emerald: #10b981;
   --emerald-glow: rgba(16, 185, 129, 0.35);
+
+  --accent-cyan: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.45);
 
   --accent-gold: #f59e0b;
   --gold-glow: rgba(245, 158, 11, 0.4);
@@ -26,21 +29,21 @@
 }
 
 [data-theme="light"] {
-  --bg-dark: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.75);
-  --bg-card-hover: rgba(51, 65, 85, 0.9);
-  --border-glass: rgba(255, 255, 255, 0.15);
-  --border-glass-glow: rgba(245, 158, 11, 0.4);
+  --bg-dark: #090d16;
+  --bg-card: rgba(24, 34, 53, 0.8);
+  --bg-card-hover: rgba(40, 56, 84, 0.95);
+  --border-glass: rgba(255, 255, 255, 0.16);
+  --border-glass-glow: rgba(56, 189, 248, 0.45);
 
   --text-main: #f8fafc;
   --text-muted: #cbd5e1;
 
-  --primary: #10b981;
-  --primary-hover: #059669;
-  --primary-glow: rgba(16, 185, 129, 0.3);
+  --primary: #38bdf8;
+  --primary-hover: #0284c7;
+  --primary-glow: rgba(56, 189, 248, 0.35);
 
   --accent-emerald: #10b981;
-  --emerald-glow: rgba(16, 185, 129, 0.3);
+  --emerald-glow: rgba(16, 185, 129, 0.35);
 }
 
 * {
@@ -50,12 +53,12 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', 'Inter', sans-serif;
   background-color: var(--bg-dark);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.18) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.15) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.14) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.22) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.2) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.18) 0px, transparent 50%);
   background-attachment: fixed;
   color: var(--text-main);
   font-size: calc(1rem * var(--font-scale));
