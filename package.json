@@ -8,7 +8,11 @@
     "start": "node server",
     "dev": "vite",
     "build": "vite build",
-    "server": "node server"
+    "server": "node server",
+    "test": "node tests/run_all_tests.js",
+    "test:unit": "node tests/run_unit_tests.js",
+    "test:integration": "node tests/run_integration_tests.js",
+    "test:system": "node tests/run_system_tests.js"
   },
   "keywords": [
     "online-voting",
@@ -36,6 +40,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.5",
     "esbuild": "^0.28.2",
+    "pdfkit": "^0.20.2",
     "vite": "^8.2.1"
   }
 }

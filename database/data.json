@@ -11,105 +11,151 @@
       "created_at": "2026-08-17T13:11:22.013Z"
     },
     {
-      "id": "usr_1787056268748_54l3",
-      "voter_id": "kautuk",
-      "name": "tatakam",
-      "email": "tapicollege7@gmail.com",
-      "phone": "",
+      "id": "usr_1790092237272_i4po",
+      "voter_id": "VOT-2026-3890",
+      "name": "personal",
+      "email": "projectsystem2234@gmail.com",
+      "phone": "2236445852",
       "role": "voter",
-      "password_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "created_at": "2026-08-18T12:31:08.748Z"
+      "password_hash": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "caesar_password": "45678",
+      "created_at": "2026-09-22T15:50:37.272Z"
     },
     {
-      "id": "usr_1787056910136_desy",
-      "voter_id": "fas",
-      "name": "sfsfsfs",
-      "email": "tapicollege7@gmail.com",
-      "phone": "",
+      "id": "usr_1790094766682_o5of",
+      "voter_id": "TEST-VOT-1790094762825",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790094762825@example.com",
+      "phone": "9876543210",
       "role": "voter",
-      "password_hash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-      "created_at": "2026-08-18T12:41:50.137Z"
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T16:32:46.682Z"
     },
     {
-      "id": "usr_1787314917618_qk0m",
-      "voter_id": "Uril",
-      "name": "lanjnjnsui",
-      "email": "kautuktambakhe177@gmail.com",
-      "phone": "4565614666",
+      "id": "usr_1790095186112_tm6p",
+      "voter_id": "TEST-VOT-1790095184455",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790095184455@example.com",
+      "phone": "9876543210",
       "role": "voter",
-      "password_hash": "e185cf0a893bb94dd48d00bbf03114b5cbf62c75d6dd60ad1d8a18cb3a8b1b98",
-      "created_at": "2026-08-21T12:21:57.618Z"
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T16:39:46.112Z"
     },
     {
-      "id": "usr_1787315455389_ajzx",
-      "voter_id": "URI",
-      "name": "AJNJANHJ",
-      "email": "kautuktambakhe177@gmail.com",
-      "phone": "",
+      "id": "usr_1790095642643_98r1",
+      "voter_id": "TEST-VOT-1790095637182",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790095637182@example.com",
+      "phone": "9876543210",
       "role": "voter",
-      "password_hash": "e5f73606d7a78135fb9a0e33b1afb6c8d1bb2c9ee504e10b11e68b4b0f365673",
-      "created_at": "2026-08-21T12:30:55.389Z"
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T16:47:22.643Z"
     },
     {
-      "id": "usr_1787316480170_brzc",
-      "voter_id": "sumit",
-      "name": "dadadad",
-      "email": "kautuktambakhe177@gmail.com",
-      "phone": "",
+      "id": "usr_1790096055554_ryez",
+      "voter_id": "TEST-VOT-1790096050995",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790096050995@example.com",
+      "phone": "9876543210",
       "role": "voter",
-      "password_hash": "442b2d7af91e907ddc6840ee67d127f056a49fd04beba5daa1a49e47c1c6f337",
-      "created_at": "2026-08-21T12:48:00.170Z"
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T16:54:15.555Z"
     }
   ],
-  "elections": [],
-  "candidates": [],
-  "votes": [],
-  "otps": [],
-  "gmail_tokens": [
+  "elections": [
     {
-      "id": "tok_1787056268750",
-      "voter_id": "kautuk",
-      "email": "tapicollege7@gmail.com",
-      "token_code": "861411",
-      "expires_at": "2026-08-18T12:41:08.750Z",
-      "verified": true,
-      "created_at": "2026-08-18T12:31:08.750Z"
+      "id": "elec_1790092008521",
+      "title": "student consile",
+      "category": "General Poll",
+      "description": "1234",
+      "status": "active",
+      "created_at": "2026-09-22T15:46:48.521Z"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "CAND-1790092030596",
+      "election_id": "elec_1790092008521",
+      "name": "Rahul",
+      "department": "comp",
+      "party": "comp",
+      "manifesto": "jnzjckjn",
+      "photo_url": "https://ui-avatars.com/api/?name=Rahul&background=6366f1&color=fff&size=300",
+      "email": "",
+      "password": "cand123",
+      "created_at": "2026-09-22T15:47:10.601Z",
+      "vote_count": 0
     },
     {
-      "id": "tok_1787056910137",
-      "voter_id": "fas",
-      "email": "tapicollege7@gmail.com",
-      "token_code": "606211",
-      "expires_at": "2026-08-18T12:51:50.137Z",
-      "verified": false,
-      "created_at": "2026-08-18T12:41:50.137Z"
+      "id": "CAND-1790092067053",
+      "election_id": "elec_1790092008521",
+      "name": "kholi",
+      "department": "dep",
+      "party": "dep",
+      "manifesto": "lakaakks ",
+      "photo_url": "https://ui-avatars.com/api/?name=kholi&background=6366f1&color=fff&size=300",
+      "email": "",
+      "password": "cand123",
+      "created_at": "2026-09-22T15:47:47.056Z",
+      "vote_count": 1
+    }
+  ],
+  "votes": [
+    {
+      "id": "vt_1790092248045_xk3l",
+      "election_id": "elec_1790092008521",
+      "voter_id": "VOT-2026-3890",
+      "candidate_id": "CAND-1790092067053",
+      "candidate_name": "kholi",
+      "caesar_hash": "YRW-5359-6123_hohf_4023325331854_FDQG-4023325390386_4023325571378",
+      "sha256_hash": "f8a9b31dd804b83bd7b91bf2321103fff24686cf50fe2d70d9a9f65512fde53c",
+      "timestamp": "2026-09-22T15:50:48.045Z"
+    }
+  ],
+  "tokens": [
+    {
+      "id": "tok_1790094769876",
+      "voter_id": "TEST-VOT-1790094762825",
+      "email": "testvoter_1790094762825@example.com",
+      "token_code": "950773",
+      "type": "login",
+      "expires_at": "2026-09-22T16:42:49.876Z",
+      "verified": 0,
+      "created_at": "2026-09-22T16:32:49.876Z"
     },
     {
-      "id": "tok_1787314917620",
-      "voter_id": "Uril",
-      "email": "kautuktambakhe177@gmail.com",
-      "token_code": "358024",
-      "expires_at": "2026-08-21T12:31:57.620Z",
-      "verified": false,
-      "created_at": "2026-08-21T12:21:57.620Z"
+      "id": "tok_1790095189132",
+      "voter_id": "TEST-VOT-1790095184455",
+      "email": "testvoter_1790095184455@example.com",
+      "token_code": "573768",
+      "type": "login",
+      "expires_at": "2026-09-22T16:49:49.132Z",
+      "verified": 0,
+      "created_at": "2026-09-22T16:39:49.132Z"
     },
     {
-      "id": "tok_1787315455390",
-      "voter_id": "URI",
-      "email": "kautuktambakhe177@gmail.com",
-      "token_code": "377087",
-      "expires_at": "2026-08-21T12:40:55.390Z",
-      "verified": false,
-      "created_at": "2026-08-21T12:30:55.391Z"
+      "id": "tok_1790095648770",
+      "voter_id": "TEST-VOT-1790095637182",
+      "email": "testvoter_1790095637182@example.com",
+      "token_code": "258075",
+      "type": "login",
+      "expires_at": "2026-09-22T16:57:28.770Z",
+      "verified": 0,
+      "created_at": "2026-09-22T16:47:28.770Z"
     },
     {
-      "id": "tok_1787316480171",
-      "voter_id": "sumit",
-      "email": "kautuktambakhe177@gmail.com",
-      "token_code": "627560",
-      "expires_at": "2026-08-21T12:58:00.171Z",
-      "verified": false,
-      "created_at": "2026-08-21T12:48:00.171Z"
+      "id": "tok_1790096061166",
+      "voter_id": "TEST-VOT-1790096050995",
+      "email": "testvoter_1790096050995@example.com",
+      "token_code": "674948",
+      "type": "login",
+      "expires_at": "2026-09-22T17:04:21.166Z",
+      "verified": 0,
+      "created_at": "2026-09-22T16:54:21.166Z"
     }
   ]
 }

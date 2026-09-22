@@ -1,5 +1,5 @@
-// VotePulse Progressive Web App (PWA) Service Worker (Cache Buster v9)
-const CACHE_NAME = 'votepulse-pwa-v99';
+// VotePulse Progressive Web App (PWA) Service Worker (Cache Buster v115)
+const CACHE_NAME = 'votepulse-pwa-v115';
 
 const STATIC_ASSETS = [
   './',
