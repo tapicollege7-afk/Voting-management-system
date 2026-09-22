@@ -64,6 +64,17 @@
       "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
       "caesar_password": "sdvv4",
       "created_at": "2026-09-22T16:54:15.555Z"
+    },
+    {
+      "id": "usr_1790097216482_x37m",
+      "voter_id": "TEST-VOT-1790097210872",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790097210872@example.com",
+      "phone": "9876543210",
+      "role": "voter",
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T17:13:36.482Z"
     }
   ],
   "elections": [
@@ -156,6 +167,16 @@
       "expires_at": "2026-09-22T17:04:21.166Z",
       "verified": 0,
       "created_at": "2026-09-22T16:54:21.166Z"
+    },
+    {
+      "id": "tok_1790097222345",
+      "voter_id": "TEST-VOT-1790097210872",
+      "email": "testvoter_1790097210872@example.com",
+      "token_code": "445029",
+      "type": "login",
+      "expires_at": "2026-09-22T17:23:42.345Z",
+      "verified": 0,
+      "created_at": "2026-09-22T17:13:42.345Z"
     }
   ]
 }
