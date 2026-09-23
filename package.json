@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server",
     "dev": "vite",
-    "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('dist', 'docs', {recursive: true}); fs.copyFileSync('dist/index.html', 'docs/404.html'); fs.writeFileSync('docs/.nojekyll', ''); fs.copyFileSync('dist/index.html', 'index.html'); fs.copyFileSync('dist/index.html', '404.html'); fs.cpSync('dist/assets', 'assets', {recursive: true}); fs.writeFileSync('.nojekyll', ''); console.log('✅ Universal GitHub Pages build synced to root and docs/!');\"",
+    "build": "vite build && node -e \"const fs=require('fs'); fs.cpSync('dist', 'docs', {recursive: true}); fs.copyFileSync('dist/index.html', 'docs/404.html'); fs.writeFileSync('docs/.nojekyll', ''); fs.copyFileSync('dist/index.html', 'index.html'); fs.copyFileSync('dist/index.html', '404.html'); fs.cpSync('dist/assets', 'assets', {recursive: true}); fs.writeFileSync('.nojekyll', ''); ['docs/index.html','docs/404.html','dist/index.html','index.html','404.html'].forEach(f=>{if(fs.existsSync(f)){fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/<link rel=\\\"manifest\\\" href=\\\".\\/.+?\\.json\\\">/,'<link rel=\\\"manifest\\\" href=\\\"./manifest.json\\\">'))}}); console.log('✅ Build synced + manifest link fixed!');\"",
     "server": "node server",
     "test": "node tests/run_all_tests.js",
     "test:unit": "node tests/run_unit_tests.js",
