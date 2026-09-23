@@ -75,6 +75,28 @@
       "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
       "caesar_password": "sdvv4",
       "created_at": "2026-09-22T17:13:36.482Z"
+    },
+    {
+      "id": "usr_1790097631034_tj6n",
+      "voter_id": "TEST-VOT-1790097625085",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790097625085@example.com",
+      "phone": "9876543210",
+      "role": "voter",
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-22T17:20:31.034Z"
+    },
+    {
+      "id": "usr_1790139416816_8dwp",
+      "voter_id": "TEST-VOT-1790139410843",
+      "name": "Automated Test Voter",
+      "email": "testvoter_1790139410843@example.com",
+      "phone": "9876543210",
+      "role": "voter",
+      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
+      "caesar_password": "sdvv4",
+      "created_at": "2026-09-23T04:56:56.816Z"
     }
   ],
   "elections": [
@@ -177,6 +199,26 @@
       "expires_at": "2026-09-22T17:23:42.345Z",
       "verified": 0,
       "created_at": "2026-09-22T17:13:42.345Z"
+    },
+    {
+      "id": "tok_1790097637604",
+      "voter_id": "TEST-VOT-1790097625085",
+      "email": "testvoter_1790097625085@example.com",
+      "token_code": "408401",
+      "type": "login",
+      "expires_at": "2026-09-22T17:30:37.604Z",
+      "verified": 0,
+      "created_at": "2026-09-22T17:20:37.604Z"
+    },
+    {
+      "id": "tok_1790139424503",
+      "voter_id": "TEST-VOT-1790139410843",
+      "email": "testvoter_1790139410843@example.com",
+      "token_code": "158557",
+      "type": "login",
+      "expires_at": "2026-09-23T05:07:04.503Z",
+      "verified": 0,
+      "created_at": "2026-09-23T04:57:04.503Z"
     }
   ]
 }
