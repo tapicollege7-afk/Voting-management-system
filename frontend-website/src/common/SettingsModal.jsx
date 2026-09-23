@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function SettingsModal({ isOpen, onClose, theme, setTheme }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof window !== 'undefined' ? window.navigator.onLine : true);
 
   // Preference States
@@ -121,19 +122,8 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme }) {
         console.warn('Native PWA install prompt error:', err);
       }
     }
-
-    // Direct Windows Application Shortcut Download (.url file opens as native app shortcut on Windows)
-    const urlShortcutContent = `[InternetShortcut]\r\nURL=${window.location.origin}/#voter\r\nIconIndex=0\r\n`;
-    const blob = new Blob([urlShortcutContent], { type: 'application/x-mswinurl' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'VotePulse-App.url';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setIsAppInstalled(true);
+    // Native prompt not yet available — show install guide modal
+    setShowInstallGuide(true);
   };
 
   const clearCache = () => {
@@ -278,6 +268,77 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme }) {
           </button>
         </div>
       </div>
+
+      {/* PWA Install Guide Modal */}
+      {showInstallGuide && (
+        <div
+          onClick={() => setShowInstallGuide(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 20000,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+              border: '1px solid rgba(99,102,241,0.4)',
+              borderRadius: '20px',
+              padding: '2rem',
+              maxWidth: '400px',
+              width: '100%',
+              color: '#fff',
+              boxShadow: '0 20px 60px rgba(79,70,229,0.5)',
+              position: 'relative',
+            }}
+          >
+            <button
+              onClick={() => setShowInstallGuide(false)}
+              style={{
+                position: 'absolute', top: '1rem', right: '1rem',
+                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                width: '2rem', height: '2rem', color: '#fff', fontSize: '1rem',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >✕</button>
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📲</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.25rem' }}>Install VotePulse App</div>
+              <div style={{ fontSize: '0.78rem', opacity: 0.7 }}>Follow the steps for your device</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '0.9rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>💻</span> Chrome / Edge (Desktop)
+                </div>
+                <div style={{ fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.6 }}>
+                  Look for the <strong>⊕ Install</strong> icon in the address bar (right side), then click <strong>"Install"</strong>.
+                </div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '0.9rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>🤖</span> Android (Chrome)
+                </div>
+                <div style={{ fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.6 }}>
+                  Tap <strong>⋮ menu</strong> → <strong>"Add to Home screen"</strong> → <strong>"Install"</strong>.
+                </div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '0.9rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span>🍎</span> iPhone / iPad (Safari)
+                </div>
+                <div style={{ fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.6 }}>
+                  Tap <strong>Share ⬆</strong> → <strong>"Add to Home Screen"</strong> → <strong>"Add"</strong>.
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.72rem', opacity: 0.5 }}>
+              The install button appears automatically after a few visits.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
