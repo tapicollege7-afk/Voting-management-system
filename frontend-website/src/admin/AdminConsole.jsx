@@ -228,6 +228,52 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
   const [elecCategory, setElecCategory] = useState('General Poll');
   const [elecDesc, setElecDesc] = useState('');
 
+  // Auto Poll Close Form State
+  const [elecAutoClose, setElecAutoClose] = useState(true);
+  const [elecEndTime, setElecEndTime] = useState(() => {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  });
+  const [showScheduleModal, setShowScheduleModal] = useState(null);
+  const [scheduleModalEndTime, setScheduleModalEndTime] = useState('');
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const setQuickDuration = (minutes) => {
+    if (minutes === null) {
+      setElecAutoClose(false);
+      setElecEndTime('');
+      return;
+    }
+    setElecAutoClose(true);
+    const d = new Date(Date.now() + minutes * 60 * 1000);
+    setElecEndTime(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+  };
+
+  const formatTimeRemaining = (endTime) => {
+    if (!endTime) return null;
+    const diff = new Date(endTime).getTime() - nowTick;
+    if (diff <= 0) return { expired: true, text: 'Expired (Closed)' };
+    const totalSecs = Math.floor(diff / 1000);
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      return { expired: false, isNear: false, text: `${days}d ${hours % 24}h remaining` };
+    }
+    const isNear = totalSecs < 900; // < 15 mins
+    return {
+      expired: false,
+      isNear,
+      text: `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    };
+  };
+
   // Candidate Form
   const [candElectionId, setCandElectionId] = useState('');
   const [candId, setCandId] = useState('');
@@ -333,11 +379,14 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
   // ─── Create Election ──────────────────────────────────────────────────────
   const handleCreateElection = async (e) => {
     e.preventDefault();
+    const calculatedEndTime = elecAutoClose && elecEndTime ? new Date(elecEndTime).toISOString() : null;
     const newElec = {
       id: elecId || 'ELEC-' + Date.now(),
       title: elecTitle, category: elecCategory,
       description: elecDesc, status: 'active',
       created_at: new Date().toISOString(),
+      end_time: calculatedEndTime,
+      auto_close: elecAutoClose
     };
     try {
       await fetch('/api/elections', {
@@ -350,8 +399,41 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
     saveLocal(updated, candidates, voters);
     setShowCreateElectionModal(false);
     setElecId(''); setElecTitle(''); setElecDesc('');
-    showAlert('Election created & activated! 🎉', 'success');
+    showAlert('Election created & activated with auto-close schedule! 🎉', 'success');
     fetchAdminStats();
+  };
+
+  // ─── Update Poll Close Schedule / Extend Time ──────────────────────────────
+  const handleUpdateSchedule = async (id, newEndTime, autoClose = true) => {
+    try {
+      const isoEnd = newEndTime ? new Date(newEndTime).toISOString() : null;
+      const res = await fetch(`/api/elections/${id}/schedule`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ end_time: isoEnd, auto_close: autoClose })
+      });
+      if (res.ok) {
+        const isFuture = isoEnd && new Date(isoEnd).getTime() > Date.now();
+        const updated = elections.map(item => {
+          if (item.id === id) {
+            return {
+              ...item,
+              end_time: isoEnd,
+              auto_close: autoClose,
+              status: isFuture ? 'active' : item.status,
+              closed_reason: isFuture ? null : item.closed_reason
+            };
+          }
+          return item;
+        });
+        setElections(updated);
+        saveLocal(updated, candidates, voters);
+        setShowScheduleModal(null);
+        showAlert('Poll close deadline updated! ⏱️', 'success');
+        fetchAdminStats();
+      }
+    } catch (err) {
+      showAlert('Failed to update schedule: ' + err.message, 'error');
+    }
   };
 
   // ─── Toggle Election Status ───────────────────────────────────────────────
@@ -430,6 +512,44 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
       console.warn('Candidate delete request notice:', err);
     }
     const updated = candidates.filter(c => c.id !== id);
+    setCandidates(updated);
+    saveLocal(elections, updated, voters);
+    await fetchAdminStats();
+  };
+
+  // ─── Approve Candidate ───────────────────────────────────────────────────
+  const handleApproveCandidate = async (id) => {
+    try {
+      const res = await fetch(`/api/candidates/${id}/approve`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert(data.message || 'Candidate approved! Now active on ballot & portal.', 'success');
+      } else {
+        showAlert(data.message || 'Failed to approve candidate.', 'error');
+      }
+    } catch (err) {
+      showAlert('Error contacting server to approve candidate.', 'error');
+    }
+    const updated = candidates.map(c => c.id === id ? { ...c, status: 'approved' } : c);
+    setCandidates(updated);
+    saveLocal(elections, updated, voters);
+    await fetchAdminStats();
+  };
+
+  // ─── Deny Candidate ──────────────────────────────────────────────────────
+  const handleDenyCandidate = async (id) => {
+    try {
+      const res = await fetch(`/api/candidates/${id}/deny`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showAlert(data.message || 'Candidate nomination denied.', 'info');
+      } else {
+        showAlert(data.message || 'Failed to deny candidate.', 'error');
+      }
+    } catch (err) {
+      showAlert('Error contacting server to deny candidate.', 'error');
+    }
+    const updated = candidates.map(c => c.id === id ? { ...c, status: 'rejected' } : c);
     setCandidates(updated);
     saveLocal(elections, updated, voters);
     await fetchAdminStats();
@@ -560,10 +680,11 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
   };
 
   // ─── Tab definitions ──────────────────────────────────────────────────────
+  const pendingCandidates = candidates.filter(c => c.status === 'pending');
   const tabs = [
     { id: 'overview', icon: '📊', label: 'Overview' },
     { id: 'elections', icon: '🗳️', label: `Elections (${elections.length})` },
-    { id: 'candidates', icon: '👤', label: `Candidates (${candidates.length})` },
+    { id: 'candidates', icon: '👤', label: `Candidates (${candidates.length})${pendingCandidates.length > 0 ? ` [${pendingCandidates.length} Pending]` : ''}` },
     { id: 'voters', icon: '👥', label: `Voters (${voters.length})` },
     { id: 'results', icon: '📈', label: 'Results & Automatic Winners' },
   ];
@@ -792,55 +913,114 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {elections.map(e => (
-                <div key={e.id} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
-                  borderRadius: '18px', padding: '1.25rem 1.5rem',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  flexWrap: 'wrap', gap: '1rem',
-                  borderLeft: `4px solid ${e.status === 'active' ? '#10b981' : '#64748b'}`,
-                }}>
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '1rem' }}>{e.title}</span>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase',
-                        background: e.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)',
-                        color: e.status === 'active' ? '#10b981' : '#64748b',
-                        border: `1px solid ${e.status === 'active' ? 'rgba(16,185,129,0.3)' : 'rgba(100,116,139,0.3)'}`,
-                      }}>{e.status}</span>
+              {elections.map(e => {
+                const timeLeft = formatTimeRemaining(e.end_time);
+                const isAutoClosed = e.status === 'completed' && e.closed_reason === 'time_expired';
+
+                return (
+                  <div key={e.id} style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+                    borderRadius: '18px', padding: '1.25rem 1.5rem',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    flexWrap: 'wrap', gap: '1rem',
+                    borderLeft: `4px solid ${e.status === 'active' ? '#10b981' : '#64748b'}`,
+                  }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>{e.title}</span>
+                        <span style={{
+                          padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase',
+                          background: e.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)',
+                          color: e.status === 'active' ? '#10b981' : '#64748b',
+                          border: `1px solid ${e.status === 'active' ? 'rgba(16,185,129,0.3)' : 'rgba(100,116,139,0.3)'}`,
+                        }}>
+                          {e.status}
+                        </span>
+
+                        {/* Live Countdown Badge or Closed Info */}
+                        {e.status === 'active' && e.end_time && (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700,
+                            background: timeLeft?.isNear ? 'rgba(239,68,68,0.18)' : 'rgba(99,102,241,0.15)',
+                            color: timeLeft?.isNear ? '#f87171' : '#818cf8',
+                            border: `1px solid ${timeLeft?.isNear ? 'rgba(239,68,68,0.35)' : 'rgba(99,102,241,0.3)'}`,
+                            display: 'flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            <span>⏱️</span>
+                            <span>{timeLeft?.expired ? 'Auto-Closing...' : `Closes in ${timeLeft?.text}`}</span>
+                          </span>
+                        )}
+
+                        {isAutoClosed && (
+                          <span style={{
+                            padding: '2px 8px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
+                            background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
+                            border: '1px solid rgba(245,158,11,0.3)'
+                          }}>
+                            ⏰ Auto-Closed by Timer
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)' }}>{e.id}</span>
+                        {' · '}{e.category}
+                        {e.description && <span> · {e.description.slice(0, 60)}{e.description.length > 60 ? '…' : ''}</span>}
+                      </div>
+
+                      {/* Scheduled close time display */}
+                      {e.end_time && (
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>⏱️ Scheduled Deadline:</span>
+                          <strong style={{ color: timeLeft?.expired ? '#ef4444' : 'var(--text-main)' }}>
+                            {new Date(e.end_time).toLocaleString()}
+                          </strong>
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Candidates: <strong>{candidates.filter(c => c.election_id === e.id).length}</strong>
+                        {' · '}Votes: <strong>{candidates.filter(c => c.election_id === e.id).reduce((s, c) => s + (c.vote_count || 0), 0)}</strong>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary)' }}>{e.id}</span>
-                      {' · '}{e.category}
-                      {e.description && <span> · {e.description.slice(0, 60)}{e.description.length > 60 ? '…' : ''}</span>}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Candidates: <strong>{candidates.filter(c => c.election_id === e.id).length}</strong>
-                      {' · '}Votes: <strong>{candidates.filter(c => c.election_id === e.id).reduce((s, c) => s + (c.vote_count || 0), 0)}</strong>
+
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        className="btn btn-secondary"
+                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => {
+                          const existingLocal = e.end_time
+                            ? new Date(new Date(e.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+                            : '';
+                          setScheduleModalEndTime(existingLocal);
+                          setShowScheduleModal(e);
+                        }}
+                        title="Set or Extend Automatic Poll Close Deadline"
+                      >
+                        ⏱️ Schedule Time
+                      </button>
+
+                      {e.status === 'active' ? (
+                        <button className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>
+                          ⏹ Close Poll
+                        </button>
+                      ) : (
+                        <button className="btn btn-emerald" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>
+                          ▶ Activate
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowDeleteConfirm(e)}
+                        style={{
+                          padding: '0.45rem 0.9rem', fontSize: '0.82rem', borderRadius: '10px',
+                          background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                          border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer', fontWeight: 700,
+                        }}
+                      >🗑 Delete</button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                    {e.status === 'active' ? (
-                      <button className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'completed')}>
-                        ⏹ Close Poll
-                      </button>
-                    ) : (
-                      <button className="btn btn-emerald" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => toggleElectionStatus(e.id, 'active')}>
-                        ▶ Activate
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShowDeleteConfirm(e)}
-                      style={{
-                        padding: '0.45rem 0.9rem', fontSize: '0.82rem', borderRadius: '10px',
-                        background: 'rgba(239,68,68,0.12)', color: '#ef4444',
-                        border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer', fontWeight: 700,
-                      }}
-                    >🗑 Delete</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -852,11 +1032,160 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
       {activeTab === 'candidates' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>👤 Candidate Registry</h2>
-            <button className="btn btn-primary" onClick={() => setShowCreateCandModal(true)}>
-              + Register Candidate
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>👤 Candidate Registry</h2>
+              <div style={{ fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                <span>🔒</span>
+                <span>Administrator Verified Candidates & Nomination Requests</span>
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigateTo ? navigateTo('candidate') : (window.location.hash = 'candidate')}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>👤 Candidate Portal</span>
+              <span>&rarr;</span>
             </button>
           </div>
+
+          {/* ── Pending Candidate Nomination Requests Banner ─────────────── */}
+          {pendingCandidates.length > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06))',
+              border: '1.5px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '20px',
+              padding: '1.5rem',
+              marginBottom: '1.75rem',
+              boxShadow: '0 8px 24px rgba(245, 158, 11, 0.15)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.2rem', boxShadow: '0 4px 12px rgba(245,158,11,0.35)'
+                  }}>⏳</div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b' }}>
+                      Pending Candidate Nomination Requests ({pendingCandidates.length})
+                    </h3>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      Review nomination applications. Click <strong>Allow (Approve)</strong> to appear on ballot & enable candidate login, or <strong>Deny</strong> to reject.
+                    </div>
+                  </div>
+                </div>
+                <span style={{
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  color: '#f59e0b',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontWeight: 800,
+                  fontSize: '0.75rem',
+                  border: '1px solid rgba(245, 158, 11, 0.35)'
+                }}>
+                  Verification Required
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                {pendingCandidates.map(c => {
+                  const elec = elections.find(e => e.id === c.election_id);
+                  return (
+                    <div key={c.id} style={{
+                      background: 'var(--bg-card)',
+                      border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                      borderRadius: '18px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 6px 18px rgba(0,0,0,0.25)'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.85rem' }}>
+                          <div style={{
+                            width: '48px', height: '48px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.3rem', fontWeight: 900, color: '#fff',
+                            boxShadow: '0 4px 12px rgba(245,158,11,0.3)', flexShrink: 0
+                          }}>
+                            {(c.name || '?')[0].toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>{c.party || c.department}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.id}</div>
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '12px', marginBottom: '0.85rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div><strong style={{ color: 'var(--text-muted)' }}>Target Election:</strong> {elec ? elec.title : c.election_id}</div>
+                          {c.email && <div><strong style={{ color: 'var(--text-muted)' }}>Email:</strong> <span style={{ color: '#38bdf8' }}>{c.email}</span></div>}
+                          {c.created_at && <div><strong style={{ color: 'var(--text-muted)' }}>Submitted:</strong> {new Date(c.created_at).toLocaleString()}</div>}
+                        </div>
+
+                        {c.manifesto && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '1rem', lineHeight: 1.4, background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px', borderLeft: '3px solid #f59e0b' }}>
+                            "{c.manifesto.slice(0, 100)}{c.manifesto.length > 100 ? '…' : ''}"
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => handleApproveCandidate(c.id)}
+                          style={{
+                            flex: 1.2,
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#ffffff',
+                            fontWeight: 800,
+                            fontSize: '0.82rem',
+                            padding: '0.6rem',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Allow (Approve)
+                        </button>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => handleDenyCandidate(c.id)}
+                          style={{
+                            flex: 1,
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            fontWeight: 800,
+                            fontSize: '0.82rem',
+                            padding: '0.6rem',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕ Deny
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Search */}
           <input
@@ -871,7 +1200,7 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
             <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px dashed var(--border-glass)', borderRadius: '20px' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
               <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{candSearch ? 'No results found' : 'No Candidates Yet'}</h3>
-              <p>{candSearch ? 'Try a different search.' : 'Click "Register Candidate" to add candidates.'}</p>
+              <p>{candSearch ? 'Try a different search.' : 'Candidates submit nomination requests through the Candidate Portal for administrator review.'}</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
@@ -879,22 +1208,24 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
                 const elec = elections.find(e => e.id === c.election_id);
                 const totalForElec = candidates.filter(cc => cc.election_id === c.election_id).reduce((s, cc) => s + (cc.vote_count || 0), 0);
                 const pct = totalForElec > 0 ? Math.round(((c.vote_count || 0) / totalForElec) * 100) : 0;
+                const isPending = c.status === 'pending';
+                const isRejected = c.status === 'rejected';
                 return (
                   <div key={c.id} style={{
-                    background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+                    background: 'var(--bg-card)', border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.4)' : isRejected ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-glass)'}`,
                     borderRadius: '20px', overflow: 'hidden', transition: 'all 0.3s ease',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'var(--border-glass-glow)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}>
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = isPending ? 'rgba(245, 158, 11, 0.4)' : isRejected ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-glass)'; }}>
                     {/* Avatar */}
                     <div style={{
                       height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.15))',
+                      background: isPending ? 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.15))' : isRejected ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.15))' : 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.15))',
                       borderBottom: '1px solid var(--border-glass)',
                     }}>
                       <div style={{
                         width: '60px', height: '60px', borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #6366f1, #10b981)',
+                        background: isPending ? 'linear-gradient(135deg, #f59e0b, #d97706)' : isRejected ? 'linear-gradient(135deg, #ef4444, #b91c1c)' : 'linear-gradient(135deg, #6366f1, #10b981)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '1.5rem', fontWeight: 900, color: '#fff',
                         border: '3px solid rgba(255,255,255,0.2)',
@@ -905,8 +1236,26 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
                     </div>
 
                     <div style={{ padding: '1.25rem' }}>
-                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 800, marginBottom: '2px' }}>{c.name}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700, marginBottom: '4px' }}>{c.party || c.department}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
+                        <div>
+                          <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 800, marginBottom: '2px' }}>{c.name}</div>
+                          <div style={{ fontSize: '0.78rem', color: isPending ? '#f59e0b' : isRejected ? '#ef4444' : 'var(--primary)', fontWeight: 700 }}>{c.party || c.department}</div>
+                        </div>
+                        {isPending ? (
+                          <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                            ⏳ Pending
+                          </span>
+                        ) : isRejected ? (
+                          <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 800, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            ✕ Denied
+                          </span>
+                        ) : (
+                          <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                            ✓ On Ballot
+                          </span>
+                        )}
+                      </div>
+
                       {c.manifesto && (
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '0.75rem', lineHeight: 1.4 }}>
                           "{c.manifesto.slice(0, 80)}{c.manifesto.length > 80 ? '…' : ''}"
@@ -924,17 +1273,43 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          {elec ? elec.title.slice(0, 22) + (elec.title.length > 22 ? '…' : '') : c.election_id}
+                          {elec ? elec.title.slice(0, 18) + (elec.title.length > 18 ? '…' : '') : c.election_id}
                         </span>
-                        <button
-                          onClick={() => { if (window.confirm(`Remove candidate "${c.name}"?`)) deleteCandidate(c.id); }}
-                          style={{
-                            background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)',
-                            borderRadius: '8px', padding: '3px 10px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
-                          }}
-                        >Remove</button>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          {c.status !== 'approved' && (
+                            <button
+                              type="button"
+                              onClick={() => handleApproveCandidate(c.id)}
+                              style={{
+                                background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)',
+                                borderRadius: '8px', padding: '3px 8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
+                              }}
+                              title="Allow candidate to appear on ballot & login"
+                            >✓ Allow</button>
+                          )}
+                          {c.status !== 'rejected' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDenyCandidate(c.id)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px', padding: '3px 8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
+                              }}
+                              title="Deny candidate"
+                            >✕ Deny</button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => { if (window.confirm(`Remove candidate "${c.name}"?`)) deleteCandidate(c.id); }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.06)', color: 'var(--text-muted)', border: '1px solid var(--border-glass)',
+                              borderRadius: '8px', padding: '3px 8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700,
+                            }}
+                            title="Delete candidate completely"
+                          >Remove</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1128,7 +1503,7 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.5rem' }}>🏆 Vote Distribution</h3>
                 {selectedCandidates.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    No candidates in this election. Register candidates first.
+                    No verified candidates in this election yet. Candidates nominate and verify via the Candidate Portal.
                   </div>
                 ) : (
                   <BarChart candidates={selectedCandidates} totalVotes={totalResultVotes} />
@@ -1215,6 +1590,65 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
                 <label className="form-label">Description</label>
                 <textarea className="form-input" rows={3} placeholder="Brief election description..." value={elecDesc} onChange={e => setElecDesc(e.target.value)} />
               </div>
+
+              {/* Auto Poll Close by Time Configuration */}
+              <div className="form-group" style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '14px', border: '1px solid var(--border-glass)', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⏱️ Auto Poll Close by Time</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer', color: elecAutoClose ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                    <input
+                      type="checkbox"
+                      checked={elecAutoClose}
+                      onChange={e => setElecAutoClose(e.target.checked)}
+                      style={{ accentColor: 'var(--accent-emerald)', cursor: 'pointer' }}
+                    />
+                    <span>{elecAutoClose ? 'Enabled' : 'Disabled (Manual)'}</span>
+                  </label>
+                </div>
+
+                {elecAutoClose && (
+                  <div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                      Quick duration preset or exact closing date & time:
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                      {[
+                        { label: '+30m', mins: 30 },
+                        { label: '+1 hour', mins: 60 },
+                        { label: '+4 hours', mins: 240 },
+                        { label: '+24 hours', mins: 1440 },
+                      ].map(preset => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setQuickDuration(preset.mins)}
+                          style={{
+                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                            background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-glass)',
+                            color: 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s'
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      className="form-input"
+                      type="datetime-local"
+                      value={elecEndTime}
+                      onChange={e => setElecEndTime(e.target.value)}
+                      required={elecAutoClose}
+                      style={{ fontSize: '0.88rem' }}
+                    />
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      The poll automatically closes and locks vote casting once this scheduled deadline is reached.
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
                 <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateElectionModal(false)}>Cancel</button>
                 <button className="btn btn-primary" style={{ flex: 2 }} type="submit">Create & Activate →</button>
@@ -1225,51 +1659,86 @@ export default function AdminConsole({ adminUser, setAdminUser, navigateTo }) {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════
-          MODAL: REGISTER CANDIDATE
+          MODAL: EDIT POLL SCHEDULE / EXTEND TIME
       ══════════════════════════════════════════════════════════════════ */}
-      {showCreateCandModal && (
-        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowCreateCandModal(false); }}>
-          <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>👤 Register Candidate</h2>
-              <button onClick={() => setShowCreateCandModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+      {showScheduleModal && (
+        <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(null); }}>
+          <div className="modal-content" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>⏱️ Manage Poll Deadline</h2>
+              <button onClick={() => setShowScheduleModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
-            {elections.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                <p>Create an election first before registering candidates.</p>
-                <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => { setShowCreateCandModal(false); setShowCreateElectionModal(true); }}>Create Election</button>
-              </div>
-            ) : (
-              <form onSubmit={handleCreateCandidate} onKeyDown={handleEnterKeyNavigation}>
-                <div className="form-group">
-                  <label className="form-label">Target Election *</label>
-                  <select className="form-input" value={candElectionId} onChange={e => setCandElectionId(e.target.value)} required>
-                    <option value="">Select Election…</option>
-                    {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-                  </select>
-                </div>
 
-                <div className="form-group">
-                  <label className="form-label">Full Name *</label>
-                  <input className="form-input" type="text" placeholder="Rahul Sharma" value={candName} onChange={e => setCandName(e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Party / Department</label>
-                  <input className="form-input" type="text" placeholder="Computer Science Dept." value={candParty} onChange={e => setCandParty(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Manifesto</label>
-                  <textarea className="form-input" rows={2} placeholder="Candidate's vision and promises..." value={candManifesto} onChange={e => setCandManifesto(e.target.value)} />
-                </div>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
-                  <button className="btn btn-secondary" style={{ flex: 1 }} type="button" onClick={() => setShowCreateCandModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" style={{ flex: 2 }} type="submit">Register Candidate →</button>
-                </div>
-              </form>
-            )}
+            <div style={{ marginBottom: '1rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              Election: <strong style={{ color: 'var(--text-main)' }}>{showScheduleModal.title}</strong>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                Quick Extend Shortcuts:
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { label: '+15 Mins', mins: 15 },
+                  { label: '+30 Mins', mins: 30 },
+                  { label: '+1 Hour', mins: 60 },
+                  { label: '+24 Hours', mins: 1440 },
+                ].map(item => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => {
+                      const base = (scheduleModalEndTime && new Date(scheduleModalEndTime).getTime() > Date.now())
+                        ? new Date(scheduleModalEndTime).getTime()
+                        : Date.now();
+                      const d = new Date(base + item.mins * 60 * 1000);
+                      setScheduleModalEndTime(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                    }}
+                    style={{
+                      padding: '5px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                      background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)',
+                      color: '#a5b4fc', cursor: 'pointer'
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Auto-Close Scheduled Deadline *</label>
+              <input
+                className="form-input"
+                type="datetime-local"
+                value={scheduleModalEndTime}
+                onChange={e => setScheduleModalEndTime(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                type="button"
+                onClick={() => handleUpdateSchedule(showScheduleModal.id, null, false)}
+              >
+                Disable Auto-Close
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1.5 }}
+                type="button"
+                onClick={() => handleUpdateSchedule(showScheduleModal.id, scheduleModalEndTime, true)}
+              >
+                Save Schedule →
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+
 
       {/* ══════════════════════════════════════════════════════════════════
           MODAL: DELETE ELECTION CONFIRM

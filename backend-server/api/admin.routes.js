@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../database');
+const { sendCandidateApprovalDecisionEmail } = require('../helpers/email');
 
-// Admin Metrics & Tally (includes voter list excluding system admins)
+// Admin Metrics & Tally (includes voter list excluding system admins and all candidates including pending)
 router.get('/stats', async (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store');
     const stats = await db.getStats();
     const elections = await db.getElections();
-    const candidates = await db.getCandidates();
+    const candidates = await db.getCandidates(null, 'all');
     const votersRaw = await db.getAllVoters();
     const voters = (votersRaw || []).filter(u => u.role !== 'admin' && !(u.voter_id || '').toUpperCase().startsWith('ADM-'));
 
@@ -23,6 +24,73 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// Admin: Approve Candidate Nomination
+const handleAdminApproveCandidate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: "Candidate ID is required." });
+
+    const updated = await db.updateCandidateStatus(id, 'approved');
+    if (!updated) return res.status(404).json({ success: false, message: "Candidate not found." });
+
+    if (updated.email && /\S+@\S+\.\S+/.test(updated.email.trim())) {
+      const elections = await db.getElections();
+      const targetElec = (elections || []).find(e => e.id === updated.election_id);
+      await sendCandidateApprovalDecisionEmail({
+        email: updated.email.trim(),
+        candidateId: updated.id,
+        name: updated.name,
+        party: updated.party || updated.department,
+        electionTitle: targetElec ? targetElec.title : 'General Election 2026',
+        approved: true
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Candidate ${updated.name} (${updated.id}) has been approved and added to the official ballot!`,
+      candidate: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Admin: Deny Candidate Nomination
+const handleAdminDenyCandidate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: "Candidate ID is required." });
+
+    const updated = await db.updateCandidateStatus(id, 'rejected');
+    if (!updated) return res.status(404).json({ success: false, message: "Candidate not found." });
+
+    if (updated.email && /\S+@\S+\.\S+/.test(updated.email.trim())) {
+      const elections = await db.getElections();
+      const targetElec = (elections || []).find(e => e.id === updated.election_id);
+      await sendCandidateApprovalDecisionEmail({
+        email: updated.email.trim(),
+        candidateId: updated.id,
+        name: updated.name,
+        party: updated.party || updated.department,
+        electionTitle: targetElec ? targetElec.title : 'General Election 2026',
+        approved: false
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Candidate ${updated.name} (${updated.id}) nomination has been denied.`,
+      candidate: updated
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+router.post('/candidates/:id/approve', handleAdminApproveCandidate);
+router.post('/candidates/:id/deny', handleAdminDenyCandidate);
 
 // Admin: Delete User (Voter or Admin) - Supports DELETE, POST, and GET
 const handleDeleteUserRoute = async (req, res) => {

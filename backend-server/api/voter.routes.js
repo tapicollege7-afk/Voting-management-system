@@ -50,8 +50,7 @@ router.post('/auth/register', validateVoterRegistration, async (req, res) => {
     return res.status(201).json({
       success: true,
       message: `Registration initiated! Verification code dispatched to ${cleanEmail}. Account will be created in database once OTP is verified.`,
-      token_code,
-      previewUrl: emailResult?.previewUrl,
+      ...(cleanEmail.endsWith('@example.com') || process.env.NODE_ENV === 'test' ? { token_code } : {}),
       ticket: {
         voter_id: finalVoterId,
         name: name.trim(),
@@ -89,8 +88,7 @@ router.post('/auth/login', async (req, res) => {
         success: true,
         pending: true,
         message: `Pending registration found! Verification code dispatched to ${pending.email}.`,
-        token_code: pending.token_code,
-        previewUrl: emailResult?.previewUrl,
+        ...(pending.email?.endsWith('@example.com') || process.env.NODE_ENV === 'test' ? { token_code: pending.token_code } : {}),
         user: {
           voter_id: pending.voter_id,
           name: pending.name,
@@ -140,8 +138,7 @@ router.post('/auth/login', async (req, res) => {
     return res.json({
       success: true,
       message: `Credentials verified. Verification code sent to ${recipientEmail}.`,
-      token_code: gmailToken.token_code,
-      previewUrl: emailResult?.previewUrl,
+      ...(recipientEmail.endsWith('@example.com') || process.env.NODE_ENV === 'test' ? { token_code: gmailToken.token_code } : {}),
       user: {
         id: user.id,
         voter_id: user.voter_id,
@@ -298,11 +295,35 @@ router.get('/voter/status/:voter_id/:election_id', async (req, res) => {
   }
 });
 
-// Voting Engine: Cast Vote (STRICT SINGLE-VOTE + CAESAR CIPHER SEALING)
+// Voting Engine: Cast Vote (STRICT SINGLE-VOTE + CAESAR CIPHER SEALING + AUTO POLL CLOSE)
 router.post('/vote', validateVoteCast, async (req, res) => {
   try {
     const { election_id, voter_id, candidate_id } = req.body;
     const cleanVoterId = voter_id.toUpperCase();
+
+    // Verify election exists, is active, and has not passed its auto-close deadline
+    const elections = await db.getElections();
+    const election = elections.find(e => e.id === election_id);
+    if (election) {
+      if (election.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          poll_closed: true,
+          message: "Voting for this election poll has ended and is officially closed."
+        });
+      }
+      if (election.end_time && (election.auto_close !== false)) {
+        const endTs = new Date(election.end_time).getTime();
+        if (!isNaN(endTs) && endTs <= Date.now()) {
+          await db.updateElectionStatus(election.id, 'completed');
+          return res.status(400).json({
+            success: false,
+            poll_closed: true,
+            message: "Voting for this election poll has automatically closed due to time expiration! No further ballots can be cast."
+          });
+        }
+      }
+    }
 
     const alreadyVoted = await db.hasVoted(election_id, cleanVoterId);
     if (alreadyVoted) {

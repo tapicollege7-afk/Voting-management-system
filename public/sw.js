@@ -1,6 +1,6 @@
-// VotePulse PWA Service Worker v200
+// VotePulse PWA Service Worker v400
 // Caches the app shell so the app works offline — like watchlist-hub pattern.
-const CACHE_NAME = 'votepulse-pwa-v200';
+const CACHE_NAME = 'votepulse-pwa-v400';
 
 const APP_SHELL = [
   './',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navbar, SettingsModal } from './common';
+import LandingHome from './home';
 import VoterPortal from './voter';
 import CandidatePortal from './candidate';
 import AdminConsole from './admin';
@@ -18,25 +19,28 @@ export default function App() {
     if (hash.includes('admin')) return 'admin';
     if (hash.includes('audit')) return 'audit';
     if (hash.includes('voter')) return 'voter';
+    if (hash.includes('home')) return 'home';
 
     // 2. Explicit Pathname priority
     if (pathname.includes('candidate')) return 'candidate';
     if (pathname.includes('admin')) return 'admin';
     if (pathname.includes('audit')) return 'audit';
     if (pathname.includes('voter')) return 'voter';
+    if (pathname.includes('home')) return 'home';
 
     // 3. Search query params priority
     if (search.includes('candidate')) return 'candidate';
     if (search.includes('admin')) return 'admin';
     if (search.includes('audit')) return 'audit';
     if (search.includes('voter')) return 'voter';
+    if (search.includes('home')) return 'home';
 
     // 4. Stored session fallback
-    if (['candidate', 'admin', 'audit', 'voter'].includes(stored)) {
+    if (['candidate', 'admin', 'audit', 'voter', 'home'].includes(stored)) {
       return stored;
     }
 
-    return 'voter';
+    return 'home';
   };
 
   const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
@@ -153,13 +157,17 @@ export default function App() {
       const pathname = window.location.pathname.toLowerCase();
       const search = window.location.search.toLowerCase();
 
-      let target = 'voter';
+      let target = 'home';
       if (hash.includes('candidate') || pathname.includes('candidate') || search.includes('candidate')) {
         target = 'candidate';
       } else if (hash.includes('admin') || pathname.includes('admin') || search.includes('admin')) {
         target = 'admin';
       } else if (hash.includes('audit') || pathname.includes('audit') || search.includes('audit')) {
         target = 'audit';
+      } else if (hash.includes('voter') || pathname.includes('voter') || search.includes('voter')) {
+        target = 'voter';
+      } else if (hash.includes('home') || pathname.includes('home') || search.includes('home')) {
+        target = 'home';
       }
 
       setCurrentRoute(prev => {
@@ -180,7 +188,7 @@ export default function App() {
       clearModuleSessions();
     }
     sessionStorage.setItem('votepulse_active_route', newRoute);
-    if (newRoute === 'voter') {
+    if (newRoute === 'home') {
       window.location.hash = '';
     } else {
       window.location.hash = newRoute;
@@ -188,11 +196,14 @@ export default function App() {
     setCurrentRoute(newRoute);
   };
 
-  // Global Keyboard Shortcuts: Alt+1 (Voter), Alt+2 (Candidate), Alt+3 (Admin), Alt+4 (Audit)
+  // Global Keyboard Shortcuts: Alt+0 (Home), Alt+1 (Voter), Alt+2 (Candidate), Alt+3 (Admin), Alt+4 (Audit)
   useEffect(() => {
     const handleGlobalShortcuts = (e) => {
       if (e.altKey) {
-        if (e.key === '1') {
+        if (e.key === '0') {
+          e.preventDefault();
+          navigateTo('home');
+        } else if (e.key === '1') {
           e.preventDefault();
           navigateTo('voter');
         } else if (e.key === '2') {
@@ -376,6 +387,12 @@ export default function App() {
       )}
 
       <main>
+        {currentRoute === 'home' && (
+          <LandingHome
+            navigateTo={navigateTo}
+          />
+        )}
+
         {currentRoute === 'voter' && (
           <VoterPortal
             user={voterUser}

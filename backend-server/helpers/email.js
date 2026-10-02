@@ -72,6 +72,22 @@ function trackSentEmail(to, subject, mode, messageId, previewUrl) {
 }
 
 async function dispatchEmailUnlimited(mailOptions) {
+  const cleanTo = (mailOptions.to || '').toLowerCase().trim();
+
+  // Guard: Test / Mock domains or Test environment must never consume Gmail SMTP quota
+  const isTestTarget = process.env.NODE_ENV === 'test' ||
+                       cleanTo.endsWith('@example.com') ||
+                       cleanTo.endsWith('@test.com') ||
+                       cleanTo.endsWith('.test') ||
+                       cleanTo.endsWith('.invalid') ||
+                       cleanTo.includes('testvoter');
+
+  if (isTestTarget) {
+    console.log(`[TEST SIMULATED DISPATCH] Preserving Gmail quota for test address: ${cleanTo}`);
+    trackSentEmail(mailOptions.to, mailOptions.subject, 'simulated-test', 'sim_test_' + Date.now(), null);
+    return { success: true, mode: 'simulated-test', messageId: 'sim_test_' + Date.now() };
+  }
+
   // 1. Try Brevo (Sendinblue) HTTPS API if BREVO_API_KEY exists
   if (process.env.BREVO_API_KEY) {
     try {
@@ -133,21 +149,21 @@ async function dispatchEmailUnlimited(mailOptions) {
     const transporter = await createTransporter();
     if (transporter) {
       const info = await transporter.sendMail(mailOptions);
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) {
-        console.log(`📬 [LIVE TEST EMAIL PREVIEW URL] ${previewUrl}`);
-      } else {
-        console.log(`[SMTP SUCCESS] Message delivered! Message-ID: ${info.messageId}`);
-      }
-      trackSentEmail(mailOptions.to, mailOptions.subject, 'smtp', info.messageId, previewUrl);
-      return { success: true, mode: 'smtp', messageId: info.messageId, previewUrl };
+      console.log(`[SMTP SUCCESS] Message delivered to ${mailOptions.to}! Message-ID: ${info.messageId}`);
+      trackSentEmail(mailOptions.to, mailOptions.subject, 'smtp', info.messageId, null);
+      return { success: true, mode: 'smtp', messageId: info.messageId };
     }
   } catch (err) {
-    console.warn(`[SMTP NOTICE] Primary delivery error (${err.message}). Activating Ethereal Failover Engine...`);
+    if (err.message && err.message.includes('550-5.4.5')) {
+      console.error(`⚠️ [GMAIL SMTP 550 RATE LIMIT EXCEEDED] Google returned: "Daily user sending limit exceeded" for ${process.env.GMAIL_USER}.`);
+      console.error(`   Google limits free Gmail accounts to 100-500 emails/day. To deliver to real inboxes immediately, update .env with an active Gmail account and App Password.`);
+    } else {
+      console.warn(`[SMTP NOTICE] Primary delivery error (${err.message}). Activating Ethereal Failover Engine...`);
+    }
     cachedTransporter = null;
   }
 
-  // 4. Automatic Failover: Ephemeral Ethereal test inbox with live web preview URL
+  // 4. Automatic Failover: Ephemeral Ethereal test inbox (internal fallback, no previewUrl passed to client)
   try {
     const testAccount = await nodemailer.createTestAccount();
     const etherealTransporter = nodemailer.createTransport({
@@ -157,12 +173,8 @@ async function dispatchEmailUnlimited(mailOptions) {
       auth: { user: testAccount.user, pass: testAccount.pass }
     });
     const info = await etherealTransporter.sendMail(mailOptions);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`📬 [ETHEREAL FAILOVER PREVIEW URL] ${previewUrl}`);
-    }
-    trackSentEmail(mailOptions.to, mailOptions.subject, 'ethereal', info.messageId, previewUrl);
-    return { success: true, mode: 'ethereal', messageId: info.messageId, previewUrl };
+    trackSentEmail(mailOptions.to, mailOptions.subject, 'ethereal', info.messageId, null);
+    return { success: true, mode: 'ethereal', messageId: info.messageId };
   } catch (etherealErr) {
     console.warn(`[ETHEREAL FAILOVER NOTICE] ${etherealErr.message}`);
   }
@@ -369,10 +381,11 @@ VotePulse Cryptographic Online Voting Platform
 /**
  * Send Official Candidate Digital Credential Ticket
  */
-async function sendCandidateRegistrationTicket({ email, candidateId, name, password, party, electionTitle }) {
+async function sendCandidateRegistrationTicket({ email, candidateId, name, password, party, electionTitle, manifesto, statusText }) {
   const { smtpUser, projectSender, projectEmail } = getSenderConfig();
   const cleanRecipient = (email || '').trim();
   const issueDate = new Date().toLocaleString();
+  const currentStatus = statusText || 'PENDING ADMINISTRATOR APPROVAL';
 
   const plainTextBody = `VotePulse Online Voting System - Official Candidate Credential Ticket
 
@@ -385,8 +398,9 @@ Party/Dept:       ${party || 'General'}
 Election Office:  ${electionTitle || 'General Election'}
 Password:         ${password}
 Email Address:    ${cleanRecipient}
+Manifesto:        ${manifesto || 'Official Campaign Manifesto'}
 Date of Issue:    ${issueDate}
-Nomination Status: CERTIFIED & ACTIVE
+Nomination Status: ${currentStatus}
 =======================================================
 
 VotePulse Candidate Command Headquarters
@@ -480,6 +494,174 @@ VotePulse Candidate Command Headquarters
   console.log(`   To:           ${cleanRecipient}`);
   console.log(`   Candidate ID: ${candidateId}`);
   console.log(`   Name:         ${name}`);
+  return await dispatchEmailUnlimited(mailOptions);
+}
+
+/**
+ * Send Candidate Login Verification OTP
+ */
+async function sendCandidateLoginVerificationCode(recipientEmail, candidateId, candidateName, verificationToken) {
+  const { smtpUser, projectSender, projectEmail } = getSenderConfig();
+  const cleanRecipient = (recipientEmail || '').trim();
+
+  const plainTextBody = `VotePulse Online Voting System - Candidate Login Verification Code
+
+Hello Candidate ${candidateName || ''},
+
+Your single-use 6-digit verification code to sign in to the Candidate Campaign Command Center for Candidate ID [${candidateId}] is:
+========================================
+  ${verificationToken}
+========================================
+
+This token expires in 10 minutes.
+If you did not request this login code, please verify your candidate account security immediately.
+
+VotePulse Secure E-Voting Platform
+`;
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+      <div style="background: linear-gradient(135deg, #0891b2, #3b82f6); padding: 2.25rem 1.75rem; text-align: center; color: white;">
+        <h1 style="margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px;">🔐 VotePulse</h1>
+        <p style="margin: 6px 0 0 0; font-size: 0.95rem; opacity: 0.9;">Candidate Command Center Sign-In Verification</p>
+      </div>
+      <div style="padding: 2rem 1.75rem; color: #0f172a;">
+        <h2 style="margin-top: 0; font-size: 1.25rem; font-weight: 700; color: #1e293b;">Hello Candidate ${candidateName || ''},</h2>
+        <p style="font-size: 0.98rem; color: #475569; line-height: 1.6;">
+          Your single-use login verification code for Candidate ID <strong style="color: #0891b2; font-family: monospace;">${candidateId}</strong> is ready:
+        </p>
+        <div style="background: #ecfeff; border: 2px dashed #0891b2; padding: 1.5rem; border-radius: 16px; text-align: center; margin: 1.75rem 0;">
+          <span style="font-size: 2.6rem; font-weight: 900; letter-spacing: 8px; color: #0891b2; font-family: monospace; display: block;">${verificationToken}</span>
+          <span style="font-size: 0.78rem; color: #64748b; margin-top: 6px; display: block;">Valid for 10 minutes</span>
+        </div>
+        <p style="font-size: 0.88rem; color: #64748b; line-height: 1.5;">
+          🛡️ Never share this verification code with anyone. Enter this code into your browser to unlock the Campaign Command Center.
+        </p>
+      </div>
+      <div style="background: #f1f5f9; padding: 1.15rem; text-align: center; font-size: 0.8rem; color: #64748b; border-top: 1px solid #e2e8f0;">
+        &copy; 2026 VotePulse Online Voting System. Sent to ${cleanRecipient}
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${projectSender} Candidate Security" <${projectEmail}>`,
+    sender: smtpUser,
+    replyTo: projectEmail,
+    to: cleanRecipient,
+    subject: `🔐 VotePulse Candidate Sign-In Code: ${verificationToken}`,
+    text: plainTextBody,
+    html: htmlBody,
+    headers: {
+      'X-Priority': '1',
+      'X-MSMail-Priority': 'High',
+      'Importance': 'High'
+    }
+  };
+
+  console.log(`\n===================================================`);
+  console.log(`📧 [CANDIDATE SIGN-IN OTP DISPATCH]`);
+  console.log(`   To:           ${cleanRecipient}`);
+  console.log(`   Candidate ID: ${candidateId}`);
+  console.log(`   Name:         ${candidateName}`);
+  console.log(`   Code:         [ ${verificationToken} ]`);
+  console.log(`===================================================\n`);
+
+  return await dispatchEmailUnlimited(mailOptions);
+}
+
+/**
+ * Send Candidate Approval or Denial Decision Email
+ */
+async function sendCandidateApprovalDecisionEmail({ email, candidateId, name, party, electionTitle, approved }) {
+  const { smtpUser, projectSender, projectEmail } = getSenderConfig();
+  const cleanRecipient = (email || '').trim();
+  const decisionDate = new Date().toLocaleString();
+
+  const isApproved = Boolean(approved);
+  const statusLabel = isApproved ? 'APPROVED & CERTIFIED' : 'NOT APPROVED / DENIED';
+  const statusColor = isApproved ? '#10b981' : '#ef4444';
+  const statusIcon = isApproved ? '🎉' : '⚠️';
+
+  const plainTextBody = `VotePulse Online Voting System - Candidate Review Decision Notice
+
+=======================================================
+         ${statusIcon} CANDIDACY NOMINATION DECISION
+=======================================================
+Candidate ID:     ${candidateId}
+Candidate Name:   ${name}
+Party/Dept:       ${party || 'General'}
+Target Election:  ${electionTitle || 'General Election'}
+Decision Status:  ${statusLabel}
+Date of Decision: ${decisionDate}
+=======================================================
+
+${isApproved ? 
+'Congratulations! The Election Administrator has reviewed and approved your nomination. Your candidacy is now active on the official voter ballot, and you can log in to your Candidate Command Center using your Candidate ID and password.' : 
+'We regret to inform you that your nomination request has not been approved by the Election Administrator at this time. Please try again later.'}
+
+VotePulse Electoral Commission
+`;
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border: 2px solid ${statusColor}; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+      <div style="background: ${isApproved ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)'}; padding: 2rem; text-align: center; color: #ffffff;">
+        <div style="font-size: 2.8rem; margin-bottom: 0.25rem;">${statusIcon}</div>
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 900;">${isApproved ? 'Candidate Nomination Approved!' : 'Candidate Nomination Status'}</h1>
+        <div style="display: inline-block; background: rgba(255,255,255,0.25); padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-top: 8px; letter-spacing: 1px; text-transform: uppercase;">
+          ${statusLabel}
+        </div>
+      </div>
+      <div style="padding: 2rem; color: #0f172a;">
+        <p style="font-size: 1rem; line-height: 1.6; color: #334155;">
+          Hello <strong>${name}</strong>,<br>
+          ${isApproved ? 
+            `Your candidacy nomination for <strong>${electionTitle || 'the election'}</strong> has been <strong>approved</strong> by the administrator. You now appear on the official voter ballot, and your Candidate Command Center is unlocked.` : 
+            `Your candidacy nomination for <strong>${electionTitle || 'the election'}</strong> has been reviewed by the administrator and was not approved. Please try again later.`}
+        </p>
+
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.25rem; margin: 1.5rem 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <tr><td style="padding: 6px 0; color: #64748b; width: 40%;">Candidate ID:</td><td style="padding: 6px 0; font-weight: 800; font-family: monospace; color: #0284c7;">${candidateId}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Target Election:</td><td style="padding: 6px 0; font-weight: 700;">${electionTitle || 'General Election'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Status:</td><td style="padding: 6px 0; font-weight: 800; color: ${statusColor};">${statusLabel}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Decision Date:</td><td style="padding: 6px 0; color: #64748b;">${decisionDate}</td></tr>
+          </table>
+        </div>
+
+        ${isApproved ? `
+        <div style="text-align: center; margin-top: 1.5rem;">
+          <a href="http://localhost:3000/#candidate" style="display: inline-block; background: #10b981; color: #ffffff; text-decoration: none; padding: 0.8rem 1.8rem; border-radius: 12px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(16,185,129,0.35);">
+            🚀 Enter Candidate Command Center
+          </a>
+        </div>
+        ` : `
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 0 10px 10px 0; font-size: 0.85rem; color: #991b1b;">
+          If you believe this was in error, please contact your election commissioner or try again later.
+        </div>
+        `}
+      </div>
+      <div style="background: #f1f5f9; padding: 1rem; text-align: center; font-size: 0.8rem; color: #64748b; border-top: 1px solid #e2e8f0;">
+        &copy; 2026 VotePulse Secure Online Voting Platform. Delivered to ${cleanRecipient}
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${projectSender} Candidate Registry" <${projectEmail}>`,
+    sender: smtpUser,
+    replyTo: projectEmail,
+    to: cleanRecipient,
+    subject: isApproved ? `🎉 VotePulse: Candidate Nomination APPROVED (${candidateId})` : `VotePulse: Candidate Nomination Decision Notice`,
+    text: plainTextBody,
+    html: htmlBody,
+    headers: { 'X-Priority': '1', 'X-MSMail-Priority': 'High', 'Importance': 'High' }
+  };
+
+  console.log(`\n===================================================`);
+  console.log(`📬 [CANDIDATE DECISION EMAIL DISPATCH]`);
+  console.log(`   To:       ${cleanRecipient}`);
+  console.log(`   Decision: ${statusLabel}`);
   console.log(`===================================================\n`);
 
   return await dispatchEmailUnlimited(mailOptions);
@@ -488,5 +670,8 @@ VotePulse Candidate Command Headquarters
 module.exports = {
   sendGmailVerificationCode,
   sendVoterRegistrationTicket,
-  sendCandidateRegistrationTicket
+  sendCandidateRegistrationTicket,
+  sendCandidateLoginVerificationCode,
+  sendCandidateApprovalDecisionEmail
 };
+

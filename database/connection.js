@@ -27,7 +27,10 @@ const ElectionSchema = new mongoose.Schema({
   category: { type: String, default: 'General Poll' },
   description: { type: String, default: '' },
   status: { type: String, default: 'active' },
-  created_at: { type: String, default: () => new Date().toISOString() }
+  created_at: { type: String, default: () => new Date().toISOString() },
+  end_time: { type: String, default: null },
+  auto_close: { type: Boolean, default: true },
+  closed_reason: { type: String, default: null }
 });
 
 const CandidateSchema = new mongoose.Schema({
@@ -38,6 +41,10 @@ const CandidateSchema = new mongoose.Schema({
   party: { type: String, default: 'Independent' },
   manifesto: { type: String, default: '' },
   photo_url: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300' },
+  email: { type: String, default: '' },
+  password: { type: String, default: 'cand123' },
+  status: { type: String, default: 'approved' },
+  created_at: { type: String, default: () => new Date().toISOString() },
   vote_count: { type: Number, default: 0 }
 });
 
@@ -503,7 +510,36 @@ class MongoDatabase {
     return await this.verifyGmailToken(voter_id, token_code);
   }
 
+  async checkAndAutoCloseElections() {
+    const now = Date.now();
+    let changed = false;
+
+    this.checkReloadDataJson();
+    for (const elec of this.inMemoryStore.elections) {
+      if (elec.status === 'active' && elec.end_time && (elec.auto_close !== false)) {
+        const endTs = new Date(elec.end_time).getTime();
+        if (!isNaN(endTs) && endTs <= now) {
+          elec.status = 'completed';
+          elec.closed_reason = 'time_expired';
+          changed = true;
+          console.log(`⏰ [Auto-Close] Poll "${elec.title}" (${elec.id}) reached scheduled close time (${elec.end_time}) and has automatically closed.`);
+
+          if (this.isConnected && mongoose.connection.readyState === 1) {
+            try {
+              await Election.findOneAndUpdate({ id: elec.id }, { status: 'completed', closed_reason: 'time_expired' });
+            } catch (err) {}
+          }
+        }
+      }
+    }
+
+    if (changed) {
+      this.saveDataToJson();
+    }
+  }
+
   async getElections() {
+    await this.checkAndAutoCloseElections();
     if (this.isConnected && mongoose.connection.readyState === 1) {
       try {
         return await Election.find().sort({ created_at: -1 }).lean();
@@ -520,7 +556,10 @@ class MongoDatabase {
       category: data.category || 'General Poll',
       description: data.description || '',
       status: data.status || 'active',
-      created_at: new Date().toISOString()
+      created_at: data.created_at || new Date().toISOString(),
+      end_time: data.end_time || null,
+      auto_close: data.auto_close !== undefined ? !!data.auto_close : (data.end_time ? true : false),
+      closed_reason: data.closed_reason || null
     };
 
     if (this.isConnected && mongoose.connection.readyState === 1) {
@@ -539,13 +578,25 @@ class MongoDatabase {
     return newElecObj;
   }
 
-  async updateElectionStatus(id, status) {
+  async updateElectionStatus(id, status, end_time = undefined) {
+    const updateObj = { status };
+    if (end_time !== undefined) {
+      updateObj.end_time = end_time;
+    }
+    if (status === 'active') {
+      updateObj.closed_reason = null;
+    }
+
     if (this.isConnected && mongoose.connection.readyState === 1) {
       try {
-        const res = await Election.findOneAndUpdate({ id }, { status }, { new: true }).lean();
+        const res = await Election.findOneAndUpdate({ id }, updateObj, { new: true }).lean();
         if (res) {
           const inMem = this.inMemoryStore.elections.find(item => item.id === id);
-          if (inMem) inMem.status = status;
+          if (inMem) {
+            inMem.status = status;
+            if (end_time !== undefined) inMem.end_time = end_time;
+            if (status === 'active') inMem.closed_reason = null;
+          }
           this.saveDataToJson();
           return res;
         }
@@ -555,6 +606,38 @@ class MongoDatabase {
     const e = this.inMemoryStore.elections.find(item => item.id === id);
     if (e) {
       e.status = status;
+      if (end_time !== undefined) e.end_time = end_time;
+      if (status === 'active') e.closed_reason = null;
+      this.saveDataToJson();
+      return e;
+    }
+    return null;
+  }
+
+  async updateElectionSchedule(id, { end_time, auto_close }) {
+    const updateFields = {};
+    if (end_time !== undefined) updateFields.end_time = end_time;
+    if (auto_close !== undefined) updateFields.auto_close = auto_close;
+
+    if (this.isConnected && mongoose.connection.readyState === 1) {
+      try {
+        const res = await Election.findOneAndUpdate({ id }, updateFields, { new: true }).lean();
+        if (res) {
+          const inMem = this.inMemoryStore.elections.find(item => item.id === id);
+          if (inMem) {
+            if (end_time !== undefined) inMem.end_time = end_time;
+            if (auto_close !== undefined) inMem.auto_close = auto_close;
+          }
+          this.saveDataToJson();
+          return res;
+        }
+      } catch (err) {}
+    }
+
+    const e = this.inMemoryStore.elections.find(item => item.id === id);
+    if (e) {
+      if (end_time !== undefined) e.end_time = end_time;
+      if (auto_close !== undefined) e.auto_close = auto_close;
       this.saveDataToJson();
       return e;
     }
@@ -582,21 +665,36 @@ class MongoDatabase {
     return { success: true, message: "Election deleted successfully." };
   }
 
-  async getCandidates(election_id) {
+  async getCandidates(election_id = null, filterStatus = 'approved') {
+    let query = {};
+    if (election_id) query.election_id = election_id;
+    if (filterStatus && filterStatus !== 'all') {
+      if (filterStatus === 'approved') {
+        query.$or = [{ status: 'approved' }, { status: { $exists: false } }, { status: null }];
+      } else {
+        query.status = filterStatus;
+      }
+    }
+
     if (this.isConnected && mongoose.connection.readyState === 1) {
       try {
-        if (election_id) {
-          return await Candidate.find({ election_id }).lean();
-        }
-        return await Candidate.find().lean();
+        return await Candidate.find(query).lean();
       } catch (err) {}
     }
 
     this.checkReloadDataJson();
+    let list = this.inMemoryStore.candidates;
     if (election_id) {
-      return this.inMemoryStore.candidates.filter(c => c.election_id === election_id);
+      list = list.filter(c => c.election_id === election_id);
     }
-    return this.inMemoryStore.candidates;
+    if (filterStatus && filterStatus !== 'all') {
+      if (filterStatus === 'approved') {
+        list = list.filter(c => c.status === 'approved' || !c.status);
+      } else {
+        list = list.filter(c => c.status === filterStatus);
+      }
+    }
+    return list;
   }
 
   async createCandidate(data) {
@@ -607,11 +705,12 @@ class MongoDatabase {
       department: data.department || data.party || 'General',
       party: data.party || data.department || 'Independent',
       manifesto: data.manifesto || '',
-      photo_url: data.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300',
+      photo_url: data.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'Candidate')}&background=06b6d4&color=fff&size=300`,
       email: data.email || '',
       password: data.password || 'cand123',
-      created_at: new Date().toISOString(),
-      vote_count: 0
+      status: data.status || 'approved',
+      created_at: data.created_at || new Date().toISOString(),
+      vote_count: data.vote_count || 0
     };
 
     if (this.isConnected && mongoose.connection.readyState === 1) {
@@ -628,6 +727,33 @@ class MongoDatabase {
     this.inMemoryStore.candidates.push(newCandObj);
     this.saveDataToJson();
     return newCandObj;
+  }
+
+  async updateCandidateStatus(id, status) {
+    const cleanId = (id || '').trim().toLowerCase();
+    if (this.isConnected && mongoose.connection.readyState === 1) {
+      try {
+        const updated = await Candidate.findOneAndUpdate(
+          { id: { $regex: new RegExp(`^${cleanId}$`, 'i') } },
+          { status },
+          { new: true }
+        ).lean();
+        if (updated) {
+          const inMem = this.inMemoryStore.candidates.find(c => (c.id || '').toLowerCase() === cleanId);
+          if (inMem) inMem.status = status;
+          this.saveDataToJson();
+          return updated;
+        }
+      } catch (err) {}
+    }
+
+    const c = this.inMemoryStore.candidates.find(item => (item.id || '').toLowerCase() === cleanId);
+    if (c) {
+      c.status = status;
+      this.saveDataToJson();
+      return c;
+    }
+    return null;
   }
 
   async deleteCandidate(id) {
@@ -992,6 +1118,7 @@ class MongoDatabase {
   }
 
   async getStats() {
+    await this.checkAndAutoCloseElections();
     this.checkReloadDataJson();
     let total_voters = this.inMemoryStore.users.filter(u => u.role === 'voter' && !(u.voter_id || '').toUpperCase().startsWith('ADM-')).length;
     let total_elections = this.inMemoryStore.elections.length;

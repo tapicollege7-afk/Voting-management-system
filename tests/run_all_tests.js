@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 const { runAllUnitTests } = require('./run_unit_tests');
 const { runAllIntegrationTests } = require('./run_integration_tests');
 const { runAllSystemTests } = require('./run_system_tests');

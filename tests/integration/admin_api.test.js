@@ -83,6 +83,17 @@ async function runAdminIntegrationTests(sharedContext = {}) {
     });
   }
 
+  if (sharedContext.testVoterId) {
+    await test('DELETE /api/admin/voters/:voter_id cleans up test voter', async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/voters/${sharedContext.testVoterId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(data.success, true);
+    });
+  }
+
   console.log(`Admin API Tests Completed: ${passed} passed, ${failed} failed.`);
   return { passed, failed };
 }

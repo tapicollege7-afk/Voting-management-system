@@ -2,6 +2,7 @@ const { runAuthIntegrationTests } = require('./integration/auth_flow.test');
 const { runElectionCandidateIntegrationTests } = require('./integration/election_candidate.test');
 const { runVotingEngineIntegrationTests } = require('./integration/voting_engine.test');
 const { runAdminIntegrationTests } = require('./integration/admin_api.test');
+const { runHighRiskSecurityTests } = require('./integration/high_risk_security.test');
 
 async function runAllIntegrationTests() {
   console.log('====================================================');
@@ -19,9 +20,10 @@ async function runAllIntegrationTests() {
 
   const voteRes = await runVotingEngineIntegrationTests(sharedContext);
   const adminRes = await runAdminIntegrationTests(sharedContext);
+  const highRiskRes = await runHighRiskSecurityTests(sharedContext);
 
-  const totalPassed = authRes.passed + elecRes.passed + voteRes.passed + adminRes.passed;
-  const totalFailed = authRes.failed + elecRes.failed + voteRes.failed + adminRes.failed;
+  const totalPassed = authRes.passed + elecRes.passed + voteRes.passed + adminRes.passed + highRiskRes.passed;
+  const totalFailed = authRes.failed + elecRes.failed + voteRes.failed + adminRes.failed + highRiskRes.failed;
 
   console.log('\n----------------------------------------------------');
   console.log(`TIER 2 SUMMARY: ${totalPassed} PASSED, ${totalFailed} FAILED`);

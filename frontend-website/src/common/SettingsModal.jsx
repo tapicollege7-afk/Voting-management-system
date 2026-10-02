@@ -12,7 +12,6 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme }) {
   const [maskIds, setMaskIds] = useState(() => localStorage.getItem('votepulse_mask_ids') === 'true');
   const [autoLock, setAutoLock] = useState(() => localStorage.getItem('votepulse_auto_lock') || '15');
   const [pollRate, setPollRate] = useState(() => localStorage.getItem('votepulse_poll_rate') || '3');
-  const [confettiEnabled, setConfettiEnabled] = useState(() => localStorage.getItem('votepulse_confetti') !== 'false');
 
   // Network Online/Offline Listener
   useEffect(() => {
@@ -71,11 +70,6 @@ export default function SettingsModal({ isOpen, onClose, theme, setTheme }) {
     localStorage.setItem('votepulse_poll_rate', val);
   };
 
-  // Confetti Toggle Sync
-  const handleConfettiToggle = (val) => {
-    setConfettiEnabled(val);
-    localStorage.setItem('votepulse_confetti', val ? 'true' : 'false');
-  };
 
   // PWA Install Handlers
   useEffect(() => {

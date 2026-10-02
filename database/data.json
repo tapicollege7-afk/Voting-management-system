@@ -9,237 +9,31 @@
       "role": "admin",
       "password_hash": "admin123",
       "created_at": "2026-08-17T13:11:22.013Z"
-    },
-    {
-      "id": "usr_1790092237272_i4po",
-      "voter_id": "VOT-2026-3890",
-      "name": "personal",
-      "email": "projectsystem2234@gmail.com",
-      "phone": "2236445852",
-      "role": "voter",
-      "password_hash": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
-      "caesar_password": "45678",
-      "created_at": "2026-09-22T15:50:37.272Z"
-    },
-    {
-      "id": "usr_1790094766682_o5of",
-      "voter_id": "TEST-VOT-1790094762825",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790094762825@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T16:32:46.682Z"
-    },
-    {
-      "id": "usr_1790095186112_tm6p",
-      "voter_id": "TEST-VOT-1790095184455",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790095184455@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T16:39:46.112Z"
-    },
-    {
-      "id": "usr_1790095642643_98r1",
-      "voter_id": "TEST-VOT-1790095637182",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790095637182@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T16:47:22.643Z"
-    },
-    {
-      "id": "usr_1790096055554_ryez",
-      "voter_id": "TEST-VOT-1790096050995",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790096050995@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T16:54:15.555Z"
-    },
-    {
-      "id": "usr_1790097216482_x37m",
-      "voter_id": "TEST-VOT-1790097210872",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790097210872@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T17:13:36.482Z"
-    },
-    {
-      "id": "usr_1790097631034_tj6n",
-      "voter_id": "TEST-VOT-1790097625085",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790097625085@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-22T17:20:31.034Z"
-    },
-    {
-      "id": "usr_1790139416816_8dwp",
-      "voter_id": "TEST-VOT-1790139410843",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790139410843@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-23T04:56:56.816Z"
-    },
-    {
-      "id": "usr_1790139821917_snto",
-      "voter_id": "TEST-VOT-1790139816473",
-      "name": "Automated Test Voter",
-      "email": "testvoter_1790139816473@example.com",
-      "phone": "9876543210",
-      "role": "voter",
-      "password_hash": "e6c3da5b206634d7f3f3586d747ffdb36b5c675757b380c6a5fe5c570c714349",
-      "caesar_password": "sdvv4",
-      "created_at": "2026-09-23T05:03:41.917Z"
     }
   ],
-  "elections": [
-    {
-      "id": "elec_1790092008521",
-      "title": "student consile",
-      "category": "General Poll",
-      "description": "1234",
-      "status": "active",
-      "created_at": "2026-09-22T15:46:48.521Z"
-    }
-  ],
-  "candidates": [
-    {
-      "id": "CAND-1790092030596",
-      "election_id": "elec_1790092008521",
-      "name": "Rahul",
-      "department": "comp",
-      "party": "comp",
-      "manifesto": "jnzjckjn",
-      "photo_url": "https://ui-avatars.com/api/?name=Rahul&background=6366f1&color=fff&size=300",
-      "email": "",
-      "password": "cand123",
-      "created_at": "2026-09-22T15:47:10.601Z",
-      "vote_count": 0
-    },
-    {
-      "id": "CAND-1790092067053",
-      "election_id": "elec_1790092008521",
-      "name": "kholi",
-      "department": "dep",
-      "party": "dep",
-      "manifesto": "lakaakks ",
-      "photo_url": "https://ui-avatars.com/api/?name=kholi&background=6366f1&color=fff&size=300",
-      "email": "",
-      "password": "cand123",
-      "created_at": "2026-09-22T15:47:47.056Z",
-      "vote_count": 1
-    }
-  ],
+  "elections": [],
+  "candidates": [],
   "votes": [
     {
-      "id": "vt_1790092248045_xk3l",
-      "election_id": "elec_1790092008521",
-      "voter_id": "VOT-2026-3890",
-      "candidate_id": "CAND-1790092067053",
-      "candidate_name": "kholi",
-      "caesar_hash": "YRW-5359-6123_hohf_4023325331854_FDQG-4023325390386_4023325571378",
-      "sha256_hash": "f8a9b31dd804b83bd7b91bf2321103fff24686cf50fe2d70d9a9f65512fde53c",
-      "timestamp": "2026-09-22T15:50:48.045Z"
+      "id": "vt_1790923669833_vxug",
+      "election_id": "elec_1790923669470",
+      "voter_id": "RACE-VOT-1790923669826",
+      "candidate_id": "cand_1790923669532",
+      "candidate_name": "Selected Candidate",
+      "caesar_hash": "UDFH-YRW-4023256992159_hohf_4023256992703_fdqg_4023256992865_4023256992166",
+      "sha256_hash": "0ca474bbcfb31748fe784a972e520231bb365710ec2883818d5c327598ca6922",
+      "timestamp": "2026-10-02T06:47:49.833Z"
+    },
+    {
+      "id": "vt_1790924405330_s3vn",
+      "election_id": "elec_1790924404925",
+      "voter_id": "RACE-VOT-1790924405324",
+      "candidate_id": "cand_1790924404976",
+      "candidate_name": "Selected Candidate",
+      "caesar_hash": "UDFH-YRW-4023257738657_hohf_4023257737258_fdqg_4023257737209_4023257738663",
+      "sha256_hash": "9ded7c7338b14f930d9dfcd32a18aa624f34efd6bf889f346f74e60384303954",
+      "timestamp": "2026-10-02T07:00:05.330Z"
     }
   ],
-  "tokens": [
-    {
-      "id": "tok_1790094769876",
-      "voter_id": "TEST-VOT-1790094762825",
-      "email": "testvoter_1790094762825@example.com",
-      "token_code": "950773",
-      "type": "login",
-      "expires_at": "2026-09-22T16:42:49.876Z",
-      "verified": 0,
-      "created_at": "2026-09-22T16:32:49.876Z"
-    },
-    {
-      "id": "tok_1790095189132",
-      "voter_id": "TEST-VOT-1790095184455",
-      "email": "testvoter_1790095184455@example.com",
-      "token_code": "573768",
-      "type": "login",
-      "expires_at": "2026-09-22T16:49:49.132Z",
-      "verified": 0,
-      "created_at": "2026-09-22T16:39:49.132Z"
-    },
-    {
-      "id": "tok_1790095648770",
-      "voter_id": "TEST-VOT-1790095637182",
-      "email": "testvoter_1790095637182@example.com",
-      "token_code": "258075",
-      "type": "login",
-      "expires_at": "2026-09-22T16:57:28.770Z",
-      "verified": 0,
-      "created_at": "2026-09-22T16:47:28.770Z"
-    },
-    {
-      "id": "tok_1790096061166",
-      "voter_id": "TEST-VOT-1790096050995",
-      "email": "testvoter_1790096050995@example.com",
-      "token_code": "674948",
-      "type": "login",
-      "expires_at": "2026-09-22T17:04:21.166Z",
-      "verified": 0,
-      "created_at": "2026-09-22T16:54:21.166Z"
-    },
-    {
-      "id": "tok_1790097222345",
-      "voter_id": "TEST-VOT-1790097210872",
-      "email": "testvoter_1790097210872@example.com",
-      "token_code": "445029",
-      "type": "login",
-      "expires_at": "2026-09-22T17:23:42.345Z",
-      "verified": 0,
-      "created_at": "2026-09-22T17:13:42.345Z"
-    },
-    {
-      "id": "tok_1790097637604",
-      "voter_id": "TEST-VOT-1790097625085",
-      "email": "testvoter_1790097625085@example.com",
-      "token_code": "408401",
-      "type": "login",
-      "expires_at": "2026-09-22T17:30:37.604Z",
-      "verified": 0,
-      "created_at": "2026-09-22T17:20:37.604Z"
-    },
-    {
-      "id": "tok_1790139424503",
-      "voter_id": "TEST-VOT-1790139410843",
-      "email": "testvoter_1790139410843@example.com",
-      "token_code": "158557",
-      "type": "login",
-      "expires_at": "2026-09-23T05:07:04.503Z",
-      "verified": 0,
-      "created_at": "2026-09-23T04:57:04.503Z"
-    },
-    {
-      "id": "tok_1790139828393",
-      "voter_id": "TEST-VOT-1790139816473",
-      "email": "testvoter_1790139816473@example.com",
-      "token_code": "239670",
-      "type": "login",
-      "expires_at": "2026-09-23T05:13:48.393Z",
-      "verified": 0,
-      "created_at": "2026-09-23T05:03:48.393Z"
-    }
-  ]
+  "tokens": []
 }

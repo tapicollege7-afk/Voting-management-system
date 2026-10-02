@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { handleEnterKeyNavigation } from '../helpers/formNavigation';
-import { launchConfetti } from '../helpers/confetti';
 
 export default function VoterPortal({ user, setUser, navigateTo }) {
   const [authTab, setAuthTab] = useState('login');
@@ -40,7 +39,7 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
   const [showMobileModal, setShowMobileModal] = useState(false);
   const [mobileTokenInput, setMobileTokenInput] = useState('');
   const [pendingUser, setPendingUser] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [otpError, setOtpError] = useState('');
 
   // Voting Dashboard State
   const [elections, setElections] = useState([]);
@@ -57,6 +56,12 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
   const [copiedField, setCopiedField] = useState(null);
   const [registrationTicket, setRegistrationTicket] = useState(null);
   const [voterTab, setVoterTab] = useState('ballot'); // 'ballot' or 'profile'
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Clipboard Helper with visual feedback
   const copyToClipboard = (text, fieldName = 'id') => {
@@ -202,7 +207,6 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
         }
         setPendingUser(data.user);
         if (data.token_code) setLatestOtpCode(data.token_code);
-        setPreviewUrl(data.previewUrl || '');
         setMobileTokenInput('');
         setShowMobileModal(true);
         showAlert(`Verification Code dispatched to ${data.user.email}!`, 'success');
@@ -218,7 +222,6 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
     const fallbackToken = String(Math.floor(100000 + Math.random() * 900000));
     setPendingUser(fallbackUser);
     setLatestOtpCode(fallbackToken);
-    setPreviewUrl('');
     setMobileTokenInput('');
     setShowMobileModal(true);
     showAlert(`Verification Code dispatched! (Demo Code: ${fallbackToken})`, 'success');
@@ -245,7 +248,6 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
       if (res.ok && data.success) {
         setPendingUser(data.voter);
         if (data.token_code) setLatestOtpCode(data.token_code);
-        setPreviewUrl(data.previewUrl || '');
         setRegistrationTicket(null);
         setMobileTokenInput('');
         setShowMobileModal(true);
@@ -273,6 +275,7 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
 
   const handleResendCode = async () => {
     if (!pendingUser) return;
+    setOtpError('');
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -288,16 +291,25 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
         if (data.token_code) setLatestOtpCode(data.token_code);
         showAlert(`New verification code sent to ${pendingUser.email}!`, 'success');
       } else {
-        showAlert(data.message || 'Failed to resend code.');
+        const err = data.message || 'Failed to resend code.';
+        setOtpError(err);
+        showAlert(err, 'error');
       }
     } catch (e) {
-      showAlert('Error contacting server to resend code.');
+      const err = 'Error contacting server to resend code.';
+      setOtpError(err);
+      showAlert(err, 'error');
     }
   };
 
   const verifyMobileTokenSubmit = async (e) => {
-    e.preventDefault();
-    if (!mobileTokenInput.trim()) return showAlert("Please enter the 6-digit verification code sent to your email.");
+    if (e && e.preventDefault) e.preventDefault();
+    if (!mobileTokenInput.trim() || mobileTokenInput.trim().length !== 6) {
+      const err = "Please enter the complete 6-digit verification code sent to your email.";
+      setOtpError(err);
+      showAlert(err, 'error');
+      return;
+    }
 
     try {
       const res = await fetch('/api/auth/verify-gmail-token', {
@@ -308,23 +320,27 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        setOtpError('');
         const activeUser = data.user || pendingUser;
         sessionStorage.setItem('votepulse_voter', JSON.stringify(activeUser));
         localStorage.removeItem('votepulse_voter');
         setUser(activeUser);
         setShowMobileModal(false);
         setMobileTokenInput('');
-        launchConfetti();
         if (data.ticket_dispatched) {
           showAlert(`🎉 Email Verified! Official Voter Credential Ticket dispatched to ${activeUser.email}.`, 'success');
         } else {
           showAlert(`Welcome, ${activeUser.name}! Verification Successful.`, 'success');
         }
       } else {
-        showAlert(data.message || "Invalid or expired verification code.");
+        const errorText = data.message || "Invalid or expired verification code. Please check your email and try again.";
+        setOtpError(errorText);
+        showAlert(errorText, 'error');
       }
     } catch (err) {
-      showAlert("Error verifying code.");
+      const errorText = "Error verifying code. Please try again.";
+      setOtpError(errorText);
+      showAlert(errorText, 'error');
     }
   };
 
@@ -414,6 +430,9 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
 
   const submitVote = async () => {
     if (!selectedCandidate || !selectedElectionId) return;
+    if (isPollClosed) {
+      return showAlert("This election poll has ended or expired! Voting is closed.", "error");
+    }
 
     setShowVoteConfirmModal(false);
 
@@ -446,7 +465,6 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
       setVotedCaesarHash(caesar);
       setVotedSha256Hash(sha256);
 
-      launchConfetti();
       showAlert(`🎉 Vote Cast & Cryptographically Sealed for ${selectedCandidate.name}!`, 'success');
     } catch (err) {
       showAlert("Error submitting ballot vote.");
@@ -909,32 +927,27 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
                 </span>
               </p>
 
-              {previewUrl && (
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <a
-                    href={previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: 'rgba(59, 130, 246, 0.12)',
-                      border: '1px solid #3b82f6',
-                      color: '#60a5fa',
-                      padding: '8px 16px',
-                      borderRadius: '10px',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      textDecoration: 'none'
-                    }}
-                  >
-                    📬 Click to Open Sent Email Web Inbox &rarr;
-                  </a>
+
+
+              {otpError && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.16)',
+                  border: '1.5px solid #ef4444',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1rem',
+                  marginBottom: '1.25rem',
+                  color: '#f87171',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textAlign: 'left'
+                }}>
+                  <span style={{ fontSize: '1.3rem' }}>❌</span>
+                  <div style={{ flex: 1, lineHeight: 1.4 }}>{otpError}</div>
                 </div>
               )}
-
-
 
               <form id="otp-verify-form" onSubmit={verifyMobileTokenSubmit} onKeyDown={handleEnterKeyNavigation}>
                 <div className="form-group">
@@ -945,9 +958,18 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
                     placeholder="Enter 6-Digit Code"
                     maxLength={6}
                     autoFocus
-                    style={{ textAlign: 'center', fontSize: '1.4rem', letterSpacing: '6px', fontWeight: 800 }}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '1.4rem',
+                      letterSpacing: '6px',
+                      fontWeight: 800,
+                      border: otpError ? '2px solid #ef4444' : undefined,
+                      color: otpError ? '#f87171' : undefined,
+                      boxShadow: otpError ? '0 0 12px rgba(239, 68, 68, 0.35)' : undefined
+                    }}
                     value={mobileTokenInput}
                     onChange={e => {
+                      setOtpError('');
                       const val = e.target.value.replace(/\D/g, '');
                       setMobileTokenInput(val);
                       if (val.length === 6) {
@@ -998,6 +1020,26 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
 
   // Active Voter Dashboard View
   const selectedElection = elections.find(e => e.id === selectedElectionId);
+
+  // Poll Close Time & Auto-Close Calculations
+  const pollEndTime = selectedElection?.end_time ? new Date(selectedElection.end_time).getTime() : null;
+  const pollTimeDiff = pollEndTime ? pollEndTime - nowTick : null;
+  const isPollExpired = pollEndTime !== null && pollTimeDiff <= 0;
+  const isPollClosed = (selectedElection && selectedElection.status !== 'active') || isPollExpired;
+
+  let countdownDisplay = null;
+  if (pollEndTime && !isPollExpired && selectedElection?.status === 'active') {
+    const totalSecs = Math.floor(pollTimeDiff / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    if (hrs >= 24) {
+      const days = Math.floor(hrs / 24);
+      countdownDisplay = `${days}d ${hrs % 24}h remaining`;
+    } else {
+      countdownDisplay = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+  }
 
   // Calculate Live Tally & Automatic Winner Metrics
   const totalVotesCast = candidates.reduce((acc, c) => acc + (c.vote_count || 0), 0);
@@ -1238,6 +1280,54 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
               </select>
             </div>
 
+            {/* Auto Poll Close Countdown or Concluded Notice Banner */}
+            {isPollClosed ? (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '16px', padding: '1rem 1.4rem', marginTop: '1.25rem',
+                display: 'flex', alignItems: 'center', gap: '14px'
+              }}>
+                <div style={{ fontSize: '2rem' }}>🔒</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: '#f87171' }}>
+                    Voting Poll Officially Closed
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {selectedElection?.end_time
+                      ? `This election poll reached its scheduled close deadline on ${new Date(selectedElection.end_time).toLocaleString()}. Ballot casting is locked.`
+                      : 'This election poll has been closed by the election administrator. Ballot casting is locked.'}
+                  </div>
+                </div>
+              </div>
+            ) : countdownDisplay ? (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(59, 130, 246, 0.12))',
+                border: '1px solid rgba(99, 102, 241, 0.4)',
+                borderRadius: '16px', padding: '1rem 1.4rem', marginTop: '1.25rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.85rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ fontSize: '1.8rem' }}>⏱️</div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                      Auto Poll Close Countdown
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', marginTop: '2px' }}>
+                      Scheduled Deadline: <strong>{new Date(selectedElection.end_time).toLocaleDateString()} at {new Date(selectedElection.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div style={{
+                  background: 'rgba(99, 102, 241, 0.25)', border: '1px solid rgba(99, 102, 241, 0.5)',
+                  padding: '8px 16px', borderRadius: '12px', fontWeight: 900, fontSize: '1.2rem',
+                  fontFamily: 'monospace', color: '#c7d2fe', letterSpacing: '1px',
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.25)'
+                }}>
+                  ⏳ {countdownDisplay}
+                </div>
+              </div>
+            ) : null}
+
             {/* Automatic Winner Declaration Banner */}
             {winnerCandidate && (
               <div style={{
@@ -1306,7 +1396,7 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
 
               {candidates.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: '18px', color: 'var(--text-muted)' }}>
-                  No candidates registered for this poll yet. An administrator can register candidates from the Admin Console.
+                  No verified candidates for this poll yet. Candidates can nominate and verify via the Candidate Portal.
                 </div>
               ) : (
                 <div className="candidate-grid">
@@ -1383,9 +1473,20 @@ export default function VoterPortal({ user, setUser, navigateTo }) {
                               </div>
                             </div>
                           </div>
-                          <button className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
-                            Vote for Candidate
-                          </button>
+                          {isPollClosed ? (
+                            <button
+                              className="btn btn-secondary"
+                              disabled
+                              style={{ width: '100%', marginTop: 'auto', opacity: 0.65, cursor: 'not-allowed', background: 'rgba(255,255,255,0.06)' }}
+                              title="Voting is closed for this poll"
+                            >
+                              🔒 Poll Closed
+                            </button>
+                          ) : (
+                            <button className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => { setSelectedCandidate(c); setShowVoteConfirmModal(true); }}>
+                              Vote for Candidate
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

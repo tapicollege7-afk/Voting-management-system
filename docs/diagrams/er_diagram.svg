@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 760" width="100%" height="100%" style="background:#0f172a;font-family:Arial,Helvetica,sans-serif;">
+  <defs>
+    <filter id="erShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="30" y="20" width="1040" height="48" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <rect x="30" y="20" width="6" height="48" rx="3" fill="#10b981"/>
+  <text x="50" y="50" fill="#ffffff" font-size="18" font-weight="bold">VOTEPULSE: ENTITY-RELATIONSHIP (ER) SCHEMA ARCHITECTURE</text>
+  <text x="1050" y="50" fill="#10b981" font-size="12" font-weight="bold" text-anchor="end">MONGOOSE DATA MODELS &amp; SECRET BALLOT RELATIONS</text>
+
+  <!-- ================= ENTITY 1: USER ================= -->
+  <g transform="translate(60, 110)" filter="url(#erShadow)">
+    <rect x="0" y="0" width="220" height="230" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="32" rx="6" fill="#0284c7"/>
+    <text x="110" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">USER (Voter / Admin)</text>
+    
+    <text x="12" y="54" fill="#38bdf8" font-size="10.5" font-weight="bold">PK voter_id</text><text x="95" y="54" fill="#94a3b8" font-size="10">: String (Required)</text>
+    <text x="12" y="76" fill="#ffffff" font-size="10.5">name</text><text x="60" y="76" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="98" fill="#ffffff" font-size="10.5">email</text><text x="60" y="98" fill="#94a3b8" font-size="10">: String (Unique)</text>
+    <text x="12" y="120" fill="#ffffff" font-size="10.5">phone</text><text x="60" y="120" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="142" fill="#ffffff" font-size="10.5">password_hash</text><text x="100" y="142" fill="#94a3b8" font-size="10">: SHA-256</text>
+    <text x="12" y="164" fill="#ffffff" font-size="10.5">role</text><text x="60" y="164" fill="#94a3b8" font-size="10">: 'voter' | 'admin'</text>
+    <text x="12" y="186" fill="#ef4444" font-size="10.5" font-weight="bold">has_voted</text><text x="80" y="186" fill="#94a3b8" font-size="10">: Boolean (Default: false)</text>
+    <text x="12" y="208" fill="#ffffff" font-size="10.5">created_at</text><text x="80" y="208" fill="#94a3b8" font-size="10">: Date</text>
+  </g>
+
+  <!-- ================= ENTITY 2: OTP_TOKEN ================= -->
+  <g transform="translate(60, 460)" filter="url(#erShadow)">
+    <rect x="0" y="0" width="220" height="170" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="32" rx="6" fill="#d97706"/>
+    <text x="110" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">OTP_TOKEN (2FA)</text>
+
+    <text x="12" y="54" fill="#f59e0b" font-size="10.5" font-weight="bold">PK token_id</text><text x="95" y="54" fill="#94a3b8" font-size="10">: ObjectId</text>
+    <text x="12" y="76" fill="#38bdf8" font-size="10.5" font-weight="bold">FK voter_id</text><text x="95" y="76" fill="#94a3b8" font-size="10">: String -> User</text>
+    <text x="12" y="98" fill="#ffffff" font-size="10.5">token_code</text><text x="80" y="98" fill="#94a3b8" font-size="10">: String (6-Digits)</text>
+    <text x="12" y="120" fill="#ffffff" font-size="10.5">expires_at</text><text x="80" y="120" fill="#94a3b8" font-size="10">: Date (10-min TTL)</text>
+    <text x="12" y="142" fill="#ffffff" font-size="10.5">is_used</text><text x="80" y="142" fill="#94a3b8" font-size="10">: Boolean (Single-use)</text>
+  </g>
+
+  <!-- ================= ENTITY 3: ELECTION ================= -->
+  <g transform="translate(440, 110)" filter="url(#erShadow)">
+    <rect x="0" y="0" width="220" height="230" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="32" rx="6" fill="#2563eb"/>
+    <text x="110" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">ELECTION</text>
+
+    <text x="12" y="54" fill="#60a5fa" font-size="10.5" font-weight="bold">PK election_id</text><text x="100" y="54" fill="#94a3b8" font-size="10">: String (e.g. 101)</text>
+    <text x="12" y="76" fill="#ffffff" font-size="10.5">title</text><text x="60" y="76" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="98" fill="#ffffff" font-size="10.5">description</text><text x="80" y="98" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="120" fill="#ffffff" font-size="10.5">status</text><text x="60" y="120" fill="#94a3b8" font-size="10">: 'Active' | 'Closed'</text>
+    <text x="12" y="142" fill="#ffffff" font-size="10.5">start_date</text><text x="80" y="142" fill="#94a3b8" font-size="10">: Date</text>
+    <text x="12" y="164" fill="#ffffff" font-size="10.5">end_date</text><text x="80" y="164" fill="#94a3b8" font-size="10">: Date</text>
+    <text x="12" y="186" fill="#ffffff" font-size="10.5">total_votes</text><text x="80" y="186" fill="#94a3b8" font-size="10">: Number</text>
+    <text x="12" y="208" fill="#ffffff" font-size="10.5">created_at</text><text x="80" y="208" fill="#94a3b8" font-size="10">: Date</text>
+  </g>
+
+  <!-- ================= ENTITY 4: CANDIDATE ================= -->
+  <g transform="translate(800, 110)" filter="url(#erShadow)">
+    <rect x="0" y="0" width="230" height="230" rx="6" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+    <rect x="0" y="0" width="230" height="32" rx="6" fill="#7c3aed"/>
+    <text x="115" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">CANDIDATE</text>
+
+    <text x="12" y="54" fill="#c084fc" font-size="10.5" font-weight="bold">PK candidate_id</text><text x="115" y="54" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="76" fill="#60a5fa" font-size="10.5" font-weight="bold">FK election_id</text><text x="100" y="76" fill="#94a3b8" font-size="10">: String -> Election</text>
+    <text x="12" y="98" fill="#ffffff" font-size="10.5">name</text><text x="60" y="98" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="120" fill="#ffffff" font-size="10.5">party</text><text x="60" y="120" fill="#94a3b8" font-size="10">: String (Affiliation)</text>
+    <text x="12" y="142" fill="#ffffff" font-size="10.5">email</text><text x="60" y="142" fill="#94a3b8" font-size="10">: String (Verified)</text>
+    <text x="12" y="164" fill="#ffffff" font-size="10.5">manifesto</text><text x="80" y="164" fill="#94a3b8" font-size="10">: String</text>
+    <text x="12" y="186" fill="#ffffff" font-size="10.5">votes_count</text><text x="85" y="186" fill="#94a3b8" font-size="10">: Number (Tally)</text>
+    <text x="12" y="208" fill="#ffffff" font-size="10.5">created_at</text><text x="80" y="208" fill="#94a3b8" font-size="10">: Date</text>
+  </g>
+
+  <!-- ================= ENTITY 5: VOTE (DECOUPLED AUDIT LEDGER) ================= -->
+  <g transform="translate(440, 460)" filter="url(#erShadow)">
+    <rect x="0" y="0" width="260" height="210" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+    <rect x="0" y="0" width="260" height="32" rx="6" fill="#059669"/>
+    <text x="130" y="21" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">VOTE (Audit Ledger Seal)</text>
+
+    <text x="12" y="54" fill="#34d399" font-size="10.5" font-weight="bold">PK vote_id</text><text x="95" y="54" fill="#94a3b8" font-size="10">: ObjectId</text>
+    <text x="12" y="76" fill="#60a5fa" font-size="10.5" font-weight="bold">FK election_id</text><text x="100" y="76" fill="#94a3b8" font-size="10">: String -> Election</text>
+    <text x="12" y="98" fill="#c084fc" font-size="10.5" font-weight="bold">FK candidate_id</text><text x="110" y="98" fill="#94a3b8" font-size="10">: String -> Candidate</text>
+    <text x="12" y="120" fill="#ffffff" font-size="10.5">sha256_seal</text><text x="95" y="120" fill="#94a3b8" font-size="10">: String (64-Hex)</text>
+    <text x="12" y="142" fill="#ffffff" font-size="10.5">caesar_hash</text><text x="95" y="142" fill="#94a3b8" font-size="10">: String (Key=3)</text>
+    <text x="12" y="164" fill="#ffffff" font-size="10.5">receipt_id</text><text x="95" y="164" fill="#94a3b8" font-size="10">: String (RCT-xxxx)</text>
+    <text x="12" y="186" fill="#ffffff" font-size="10.5">timestamp</text><text x="95" y="186" fill="#94a3b8" font-size="10">: Date / Epoch ms</text>
+    
+    <!-- Secret Ballot Privacy Callout -->
+    <rect x="5" y="193" width="250" height="15" fill="#0f172a"/>
+    <text x="130" y="204" fill="#f59e0b" font-size="8.5" font-weight="bold" text-anchor="middle">* voter_id STRICTLY EXCLUDED (SECRET BALLOT)</text>
+  </g>
+
+  <!-- ================= RELATIONSHIP LINES & CARDINALITY ================= -->
+  <!-- User to OTP_Token (1 : N) -->
+  <line x1="170" y1="340" x2="170" y2="460" stroke="#f59e0b" stroke-width="2"/>
+  <text x="180" y="360" fill="#f59e0b" font-size="12" font-weight="bold">1</text>
+  <text x="180" y="445" fill="#f59e0b" font-size="12" font-weight="bold">N</text>
+
+  <!-- Election to Candidate (1 : N) -->
+  <line x1="660" y1="220" x2="800" y2="220" stroke="#3b82f6" stroke-width="2"/>
+  <text x="675" y="210" fill="#60a5fa" font-size="12" font-weight="bold">1</text>
+  <text x="785" y="210" fill="#60a5fa" font-size="12" font-weight="bold">N</text>
+
+  <!-- Election to Vote (1 : N) -->
+  <line x1="550" y1="340" x2="550" y2="460" stroke="#10b981" stroke-width="2"/>
+  <text x="560" y="360" fill="#34d399" font-size="12" font-weight="bold">1</text>
+  <text x="560" y="445" fill="#34d399" font-size="12" font-weight="bold">N</text>
+
+  <!-- Candidate to Vote (1 : N) -->
+  <path d="M 850 340 L 850 540 L 700 540" fill="none" stroke="#a855f7" stroke-width="2"/>
+  <text x="860" y="360" fill="#c084fc" font-size="12" font-weight="bold">1</text>
+  <text x="720" y="530" fill="#c084fc" font-size="12" font-weight="bold">N</text>
+
+  <!-- User Participation Lock Line (Abstract 1 : 1 Election Link) -->
+  <path d="M 280 220 L 440 220" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4,4"/>
+  <text x="360" y="210" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">has_voted Flag</text>
+</svg>

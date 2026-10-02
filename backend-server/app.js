@@ -131,6 +131,15 @@ async function startServer(portToUse = INITIAL_PORT) {
     }
   });
 
+  // Background Auto Poll Close Watchdog: Checks every 10 seconds for scheduled poll expiration
+  if (!global.autoCloseIntervalId) {
+    global.autoCloseIntervalId = setInterval(() => {
+      db.checkAndAutoCloseElections().catch(err => {
+        console.warn('Auto Poll Close Watchdog notice:', err.message);
+      });
+    }, 10000);
+  }
+
   return server;
 }
 

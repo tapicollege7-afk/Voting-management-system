@@ -91,6 +91,78 @@ async function runElectionCandidateIntegrationTests() {
     assert.ok(data.candidates.some(c => c.id === createdCandidateId));
   });
 
+  // 6. Update Auto Poll Close Schedule
+  await test('PATCH /api/elections/:id/schedule updates auto close schedule', async () => {
+    const futureTime = new Date(Date.now() + 3600 * 1000).toISOString();
+    const res = await fetch(`${BASE_URL}/api/elections/${createdElectionId}/schedule`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ end_time: futureTime, auto_close: true })
+    });
+    const data = await res.json();
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.election.end_time, futureTime);
+    assert.strictEqual(data.election.auto_close, true);
+  });
+
+  // 7. Auto Poll Close by Time: Expired election is marked completed & rejects vote
+  await test('Auto Poll Close: expired election automatically transitions to completed and rejects vote', async () => {
+    // Create temporary expired election
+    const expiredElecRes = await fetch(`${BASE_URL}/api/elections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Auto Close Expired Test Poll',
+        description: 'Testing poll auto-close expiration',
+        category: 'Testing',
+        end_time: new Date(Date.now() - 5000).toISOString(),
+        auto_close: true
+      })
+    });
+    const expiredElecData = await expiredElecRes.json();
+    assert.strictEqual(expiredElecRes.status, 201);
+    const expiredElecId = expiredElecData.election.id;
+
+    // Add candidate to this election
+    const candRes = await fetch(`${BASE_URL}/api/candidates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        election_id: expiredElecId,
+        name: 'Expired Poll Candidate',
+        department: 'Testing'
+      })
+    });
+    const candData = await candRes.json();
+    const expiredCandId = candData.candidate.id;
+
+    // Fetch elections - triggers checkAndAutoCloseElections and reflects completed
+    const listRes = await fetch(`${BASE_URL}/api/elections`);
+    const listData = await listRes.json();
+    const closedElec = listData.elections.find(e => e.id === expiredElecId);
+    assert.ok(closedElec, 'Expired election should exist in elections list');
+    assert.strictEqual(closedElec.status, 'completed', 'Expired election should automatically be completed');
+
+    // Attempting to cast vote on expired election must be strictly rejected
+    const voteRes = await fetch(`${BASE_URL}/api/vote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        election_id: expiredElecId,
+        voter_id: `VOT-EXPIRED-TEST-${Date.now()}`,
+        candidate_id: expiredCandId
+      })
+    });
+    const voteData = await voteRes.json();
+    assert.strictEqual(voteRes.status, 400, 'Vote on expired election must return HTTP 400');
+    assert.strictEqual(voteData.success, false);
+    assert.strictEqual(voteData.poll_closed, true);
+
+    // Clean up expired test election
+    await fetch(`${BASE_URL}/api/elections/${expiredElecId}`, { method: 'DELETE' });
+  });
+
   console.log(`Election & Candidate Tests Completed: ${passed} passed, ${failed} failed.`);
   return { passed, failed, createdElectionId, createdCandidateId };
 }

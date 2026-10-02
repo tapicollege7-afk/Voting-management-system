@@ -29,6 +29,18 @@ const ElectionSchema = {
     default: 'active',
     index: true
   },
+  end_time: {
+    type: String,
+    default: null
+  },
+  auto_close: {
+    type: Boolean,
+    default: true
+  },
+  closed_reason: {
+    type: String,
+    default: null
+  },
   created_at: {
     type: Date,
     default: Date.now

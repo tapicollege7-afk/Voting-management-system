@@ -33,10 +33,10 @@ function CandidateTicketModal({ ticket, copiedField, copyToClipboard, onClose })
         </div>
 
         <div style={{ fontSize: '3rem', marginBottom: '0.25rem' }}>🎟️</div>
-        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>NOMINATION COMPLETE</span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '1.5px' }}>NOMINATION SUBMITTED</span>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 900, margin: '6px 0 8px 0' }}>Candidate Credential Ticket</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
-          Your candidacy has been nominated! An official credential ticket was emailed to <strong style={{ color: '#38bdf8' }}>{ticket.email || 'your registered email'}</strong>.
+          Your candidacy nomination details have been submitted and sent to <strong style={{ color: '#38bdf8' }}>{ticket.email || 'your registered email'}</strong>. Once an administrator approves your nomination, you will appear on the ballot and be granted access to the Candidate Portal.
         </p>
 
         {/* Official Credential Ticket Card */}
@@ -53,8 +53,8 @@ function CandidateTicketModal({ ticket, copiedField, copyToClipboard, onClose })
               <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase' }}>VOTEPULSE ELECTORAL COMMISSION</div>
               <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--text-main)' }}>Official Candidate Pass</div>
             </div>
-            <span style={{ background: 'rgba(6, 182, 212, 0.25)', color: '#38bdf8', fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', border: '1px solid #06b6d4' }}>
-              NOMINATED
+            <span style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#f59e0b', fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', border: '1px solid #f59e0b' }}>
+              ⏳ PENDING APPROVAL
             </span>
           </div>
 
@@ -133,7 +133,7 @@ function CandidateTicketModal({ ticket, copiedField, copyToClipboard, onClose })
             onClick={onClose}
             style={{ flex: 2, minWidth: '200px', fontWeight: 800, background: 'linear-gradient(135deg, #06b6d4, #3b82f6)' }}
           >
-            🚀 Enter Command Center &rarr;
+            ✓ Got It (Pending Admin Approval)
           </button>
         </div>
       </div>
@@ -176,11 +176,6 @@ export default function CandidatePortal({ user, setUser }) {
   const [regElectionId, setRegElectionId] = useState('');
   const [regDept, setRegDept] = useState('');
   const [regManifesto, setRegManifesto] = useState('');
-
-  // Candidate Email Verification OTP State
-  const [showCandOtpModal, setShowCandOtpModal] = useState(false);
-  const [candOtpInput, setCandOtpInput] = useState('');
-  const [pendingCandPayload, setPendingCandPayload] = useState(null);
 
   // Ticket & Clipboard State
   const [copiedField, setCopiedField] = useState(null);
@@ -320,38 +315,40 @@ export default function CandidatePortal({ user, setUser }) {
     setTimeout(() => setAlertMsg(null), 5000);
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!candKeyInput.trim()) {
       showAlert('Please enter your Candidate ID, Name, or Email.', 'error');
       return;
     }
 
-    const query = candKeyInput.toLowerCase().trim();
-    const found = candidates.find(c =>
-      c.id.toLowerCase() === query ||
-      (c.email && c.email.toLowerCase() === query) ||
-      c.name.toLowerCase() === query ||
-      c.name.toLowerCase().includes(query)
-    );
+    try {
+      const res = await fetch('/api/candidates/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate_id: candKeyInput.trim(),
+          password: candPasswordInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        // If candidate was denied by admin or is still pending, server returns "Please try again later"
+        showAlert(data.message || 'Please try again later', 'error');
+        return;
+      }
 
-    if (!found) {
-      showAlert(`Candidate record '${candKeyInput}' not found. Only registered candidates can log in.`, 'error');
-      return;
+      // If allowed by admin -> direct entry to Candidate Home Page (Command Center)
+      if (data.candidate) {
+        setCandidateUser(data.candidate);
+        sessionStorage.setItem('votepulse_candidate_session', JSON.stringify(data.candidate));
+        localStorage.removeItem('votepulse_candidate_session');
+        showAlert(`Welcome Candidate ${data.candidate.name}! Campaign Command Center Active.`, 'success');
+        fetchCandidates(data.candidate.election_id);
+      }
+    } catch (err) {
+      showAlert('Please try again later', 'error');
     }
-
-    const enteredPass = candPasswordInput.trim();
-    const expectedPass = found.password || 'cand123';
-
-    if (enteredPass && enteredPass !== expectedPass) {
-      showAlert('Incorrect candidate passcode. Please check your credentials.', 'error');
-      return;
-    }
-
-    setCandidateUser(found);
-    sessionStorage.setItem('votepulse_candidate_session', JSON.stringify(found));
-    localStorage.removeItem('votepulse_candidate_session');
-    showAlert(`Welcome Candidate ${found.name}! Campaign Command Center Active.`, 'success');
   };
 
   const handleRegistrationSubmit = async (e) => {
@@ -361,8 +358,13 @@ export default function CandidatePortal({ user, setUser }) {
       showAlert('Please select an election poll.', 'error');
       return;
     }
+    const targetElec = elections.find(e => e.id === targetElecId);
+    if (targetElec && (targetElec.status !== 'active' || (targetElec.end_time && new Date(targetElec.end_time).getTime() <= Date.now()))) {
+      showAlert('This election poll is closed! Candidate nominations are locked.', 'error');
+      return;
+    }
     if (!regEmail.trim()) {
-      showAlert('Please enter your email address for verification.', 'error');
+      showAlert('Please enter your email address for registration confirmation.', 'error');
       return;
     }
 
@@ -376,66 +378,43 @@ export default function CandidatePortal({ user, setUser }) {
       department: regDept.trim() || 'General',
       party: regDept.trim() || 'General',
       manifesto: regManifesto.trim() || 'Official Campaign Manifesto',
-      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(regName.trim())}&background=06b6d4&color=fff&size=300`
+      photo_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(regName.trim())}&background=06b6d4&color=fff&size=300`,
+      status: 'pending'
     };
 
     try {
-      const res = await fetch('/api/candidates/register-otp', {
+      // Direct nomination without OTP - details sent to email and candidate queued for admin approval
+      const res = await fetch('/api/candidates/nominate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        showAlert(data.message || 'Failed to dispatch candidate verification code.', 'error');
+        showAlert(data.message || 'Failed to submit candidate nomination.', 'error');
         return;
       }
 
-      setPendingCandPayload({
-        ...payload,
-        candidate_id: data.candidate_id || candId,
-        token_code: data.token_code
+      const created = data.candidate || payload;
+      setCandidateTicket({
+        candidate_id: created.id || candId,
+        name: created.name || payload.name,
+        email: created.email || payload.email,
+        password: payload.password,
+        party: created.party || created.department || payload.party,
+        manifesto: created.manifesto || payload.manifesto,
+        election_id: targetElecId,
+        status: 'Pending Administrator Approval'
       });
-      setCandOtpInput('');
-      setShowCandOtpModal(true);
-      showAlert(`Verification code dispatched to ${regEmail.trim()}! Please enter the 6-digit OTP code below to confirm nomination.`, 'success');
-    } catch (err) {
-      showAlert(err.message, 'error');
-    }
-  };
 
-  const handleVerifyCandidateOtp = async (e) => {
-    e.preventDefault();
-    if (!candOtpInput.trim() || candOtpInput.trim().length !== 6) {
-      showAlert('Please enter the 6-digit verification code.', 'error');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/candidates/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          candidate_id: pendingCandPayload?.candidate_id,
-          email: pendingCandPayload?.email,
-          token_code: candOtpInput.trim()
-        })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        showAlert(data.message || 'Invalid candidate verification code.', 'error');
-        return;
-      }
-
-      const createdCandidate = data.candidate || pendingCandPayload;
-      setShowCandOtpModal(false);
-      setCandidateUser(createdCandidate);
-      sessionStorage.setItem('votepulse_candidate_session', JSON.stringify(createdCandidate));
-
-      // Reset registration form
+      // Reset form and switch to login tab with candidate ID prefilled
       setRegName(''); setRegKey(''); setRegEmail(''); setRegPassword(''); setRegDept(''); setRegManifesto('');
-      showAlert(`🎉 Candidate Email Verified & Nomination Confirmed! Welcome Candidate ${createdCandidate.name}!`, 'success');
-      fetchCandidates(createdCandidate.election_id);
+      setCandKeyInput(created.id || candId);
+      setCandPasswordInput(payload.password);
+      setAuthMode('login');
+
+      showAlert(`🎉 Nomination submitted! Your details have been sent to ${regEmail.trim()}. Your candidacy is pending administrator approval.`, 'success');
+      fetchCandidates(targetElecId);
     } catch (err) {
       showAlert(err.message, 'error');
     }
@@ -630,7 +609,14 @@ export default function CandidatePortal({ user, setUser }) {
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Target Election Poll *</label>
                 <select className="form-input" value={regElectionId || selectedElectionId} onChange={e => setRegElectionId(e.target.value)} required>
-                  {elections.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+                  {elections.map(e => {
+                    const isClosed = e.status !== 'active' || (e.end_time && new Date(e.end_time).getTime() <= Date.now());
+                    return (
+                      <option key={e.id} value={e.id} disabled={isClosed}>
+                        {e.title} {isClosed ? '🔒 (Poll Closed)' : '● (Active)'}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -727,8 +713,13 @@ export default function CandidatePortal({ user, setUser }) {
                 <textarea className="form-input" rows={3} placeholder="Initial Manifesto & Vision Statement (Optional)" value={regManifesto} onChange={e => setRegManifesto(e.target.value)} />
               </div>
 
+              <div style={{ background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.25)', borderRadius: '12px', padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>📬</span>
+                <span>Submitted details will be emailed directly to your address and submitted for administrator verification.</span>
+              </div>
+
               <button className="btn btn-primary" type="submit" style={{ width: '100%', padding: '0.85rem', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}>
-                🎉 Register & Nominate Candidate &rarr;
+                🎉 Submit Candidacy Nomination &rarr;
               </button>
 
               <div style={{ marginTop: '10px', fontSize: '0.74rem', color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -737,76 +728,6 @@ export default function CandidatePortal({ user, setUser }) {
             </form>
           )}
         </div>
-
-        {/* CANDIDATE EMAIL VERIFICATION OTP MODAL */}
-        {showCandOtpModal && (
-          <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-            <div className="modal-content glass-panel" style={{ textAlign: 'center', maxWidth: '520px', position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-6px' }}>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => setShowCandOtpModal(false)}
-                  style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.4rem' }}>📧</div>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 900, marginBottom: '0.4rem', color: 'var(--text-main)' }}>
-                Candidate Email Verification
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-                A 6-digit OTP verification code was sent to <strong style={{ color: '#38bdf8' }}>{pendingCandPayload?.email}</strong>.
-                Enter the code below to verify your email and save your candidate nomination in the database.
-              </p>
-
-              {pendingCandPayload?.token_code && (
-                <div style={{ background: 'rgba(6, 182, 212, 0.15)', border: '1px solid #06b6d4', padding: '10px 14px', borderRadius: '12px', marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 700 }}>Verification Code (Live Preview):</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '6px', color: '#ffffff', fontFamily: 'monospace', marginTop: '2px' }}>
-                    {pendingCandPayload.token_code}
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleVerifyCandidateOtp}>
-                <div className="form-group">
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="Enter 6-Digit OTP"
-                    maxLength={6}
-                    value={candOtpInput}
-                    onChange={e => setCandOtpInput(e.target.value.replace(/\D/g, ''))}
-                    style={{ textAlign: 'center', fontSize: '1.35rem', letterSpacing: '6px', fontWeight: 800, color: '#38bdf8' }}
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowCandOtpModal(false)}
-                    style={{ flex: 1 }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    style={{ flex: 2, background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', fontWeight: 800 }}
-                  >
-                    Verify Candidate OTP &rarr;
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

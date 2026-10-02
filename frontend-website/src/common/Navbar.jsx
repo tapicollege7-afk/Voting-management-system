@@ -11,8 +11,9 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
   const [tapCount, setTapCount] = useState(0);
   const lastTapTimeRef = useRef(0);
 
-  // Trigger 1: Secret Triple Click on Brand Logo
+  // Trigger 1: Secret Triple Click on Brand Logo & Single Click Navigate Home
   const handleLogoClick = () => {
+    navigateTo('home');
     const now = Date.now();
     if (now - lastTapTimeRef.current < 1200) {
       const newCount = tapCount + 1;
@@ -27,10 +28,11 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
     lastTapTimeRef.current = now;
   };
 
-  // Keyboard Shortcuts (Alt+1 = Voter, Alt+2 = Candidate, Alt+3 = Admin, Alt+4 = Audit, Alt+S = Settings)
+  // Keyboard Shortcuts (Alt+0 = Home, Alt+1 = Voter, Alt+2 = Candidate, Alt+3 = Admin, Alt+4 = Audit, Alt+S = Settings)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.altKey) {
+        if (e.key === '0' || e.key === 'h' || e.key === 'H') { e.preventDefault(); navigateTo('home'); }
         if (e.key === '1') { e.preventDefault(); navigateTo('voter'); }
         if (e.key === '2') { e.preventDefault(); navigateTo('candidate'); }
         if (e.key === '3') { e.preventDefault(); navigateTo('admin'); }
@@ -107,6 +109,22 @@ export default function Navbar({ currentRoute, navigateTo, onOpenSettings }) {
           <div className="header-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Module Selector Navigation Pills */}
             <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-glass)' }}>
+              <button
+                className={`nav-pill ${currentRoute === 'home' ? 'active' : ''}`}
+                onClick={() => navigateTo('home')}
+                title="VotePulse Home (Shortcut: Alt+0)"
+                style={{
+                  padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '0.82rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  background: currentRoute === 'home' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'transparent',
+                  color: currentRoute === 'home' ? '#ffffff' : 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', gap: '5px'
+                }}
+              >
+                <span>🏠 Home</span>
+                <span className="shortcut-pill" style={{ opacity: currentRoute === 'home' ? 0.9 : 0.6, fontSize: '0.65rem', padding: '1px 5px' }}>Alt+0</span>
+              </button>
+
               <button
                 className={`nav-pill ${currentRoute === 'voter' ? 'active' : ''}`}
                 onClick={() => navigateTo('voter')}

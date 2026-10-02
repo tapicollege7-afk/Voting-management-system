@@ -23,6 +23,10 @@ const CandidateSchema = {
     type: String,
     default: 'General'
   },
+  party: {
+    type: String,
+    default: 'General'
+  },
   manifesto: {
     type: String,
     default: ''
@@ -30,6 +34,19 @@ const CandidateSchema = {
   photo_url: {
     type: String,
     default: ''
+  },
+  email: {
+    type: String,
+    default: ''
+  },
+  password: {
+    type: String,
+    default: 'cand123'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   vote_count: {
     type: Number,
