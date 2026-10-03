@@ -28,11 +28,11 @@
       "title": "Student",
       "category": "Faculty Election",
       "description": "Student gang",
-      "status": "active",
+      "status": "completed",
       "created_at": "2026-10-03T04:55:23.521Z",
       "end_time": "2026-10-03T05:25:00.000Z",
       "auto_close": true,
-      "closed_reason": null
+      "closed_reason": "time_expired"
     }
   ],
   "candidates": [
@@ -48,7 +48,7 @@
       "password": "12345",
       "status": "approved",
       "created_at": "2026-10-03T04:56:52.799Z",
-      "vote_count": 0
+      "vote_count": 1
     }
   ],
   "votes": [
@@ -71,6 +71,16 @@
       "caesar_hash": "UDFH-YRW-4023257738657_hohf_4023257737258_fdqg_4023257737209_4023257738663",
       "sha256_hash": "9ded7c7338b14f930d9dfcd32a18aa624f34efd6bf889f346f74e60384303954",
       "timestamp": "2026-10-02T07:00:05.330Z"
+    },
+    {
+      "id": "vt_1791004974020_ui1u",
+      "election_id": "elec_1791003323521",
+      "voter_id": "VOT-2026-7426",
+      "candidate_id": "CAND-2026-7780",
+      "candidate_name": "Neev",
+      "caesar_hash": "YRW-5359-0759_hohf_4024336656854_FDQG-5359-0013_4024337207353",
+      "sha256_hash": "45c1202df4196bfa3bbb58912541942db693ea5d9bab9f4b5743596cac3177a7",
+      "timestamp": "2026-10-03T05:22:54.020Z"
     }
   ],
   "tokens": [
@@ -83,6 +93,46 @@
       "expires_at": "2026-10-03T05:13:03.550Z",
       "verified": 1,
       "created_at": "2026-10-03T05:03:03.550Z"
+    },
+    {
+      "id": "tok_1791004725437",
+      "voter_id": "VOT-2026-7426",
+      "email": "nmp07.tdec@gmail.com",
+      "token_code": "136133",
+      "type": "login",
+      "expires_at": "2026-10-03T05:28:45.437Z",
+      "verified": 0,
+      "created_at": "2026-10-03T05:18:45.437Z"
+    },
+    {
+      "id": "tok_1791004728188",
+      "voter_id": "VOT-2026-7426",
+      "email": "nmp07.tdec@gmail.com",
+      "token_code": "671966",
+      "type": "login",
+      "expires_at": "2026-10-03T05:28:48.188Z",
+      "verified": 1,
+      "created_at": "2026-10-03T05:18:48.188Z"
+    },
+    {
+      "id": "tok_1791004729699",
+      "voter_id": "VOT-2026-7426",
+      "email": "nmp07.tdec@gmail.com",
+      "token_code": "314005",
+      "type": "login",
+      "expires_at": "2026-10-03T05:28:49.699Z",
+      "verified": 1,
+      "created_at": "2026-10-03T05:18:49.700Z"
+    },
+    {
+      "id": "tok_1791005059863",
+      "voter_id": "VOT-2026-7426",
+      "email": "nmp07.tdec@gmail.com",
+      "token_code": "340116",
+      "type": "login",
+      "expires_at": "2026-10-03T05:34:19.863Z",
+      "verified": 0,
+      "created_at": "2026-10-03T05:24:19.863Z"
     }
   ]
 }
